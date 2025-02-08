@@ -26,13 +26,24 @@ public:
     int HP;
     int HPmax;
     int type;
+    int shootTimer;
     float speed;
+
+    float bulletSpeed = 1; 
 
     Enemy(int a){
         type = a;
         HPmax=3;
         HP=HPmax;
         speed = 2;
+    }
+
+    Enemy(){
+        type = 0;
+        HPmax=3;
+        HP=HPmax;
+        shootTimer = 2000;
+        speed = 1;
     }
 
 };
@@ -45,9 +56,11 @@ int main()
     window.setFramerateLimit(144);
 
     //texture
-    sf::Texture playerTexture("SpaceShooterShipConstructor/PNG/Example/01.png"); 
-    sf::Texture playerBulletTexture("SpaceShooterShipConstructor/PNG/Bullets/01.png");   
-    sf::Texture followEnemyTexture("SpaceShooterShipConstructor/PNG/Example/14.png");
+    sf::Texture playerTexture("C:/CPLUSPLUS/Project/Ui/Player/SpaceShooterShipConstructor/PNG/Example/01.png"); 
+    sf::Texture playerBulletTexture("C:/CPLUSPLUS/Project/Ui/Player/SpaceShooterShipConstructor/PNG/Bullets/01.png");   
+    sf::Texture followEnemyTexture("C:/CPLUSPLUS/Project/Ui/Player/SpaceShooterShipConstructor/PNG/Example/14.png");
+    sf::Texture enemyTexture("C:/CPLUSPLUS/Project/Ui/Player/SpaceShooterShipConstructor/PNG/Example/01.png");
+    sf::Texture enemyBulletTexture("C:/CPLUSPLUS/Project/Ui/Player/SpaceShooterShipConstructor/PNG/Bullets/02.png");
 
     //player
     Player player;
@@ -57,9 +70,15 @@ int main()
     sf::Vector2f playerCenter;
 
     //enemy
+    Enemy e0;
     Enemy e1(1);
+    sf::Sprite enemyShape(enemyTexture);
+    enemyShape.setOrigin({enemyShape.getGlobalBounds().size.x/2,enemyShape.getGlobalBounds().size.y/2});
+    enemyShape.setRotation(sf::degrees(180.f));
+    enemyShape.scale({0.8,0.8});
     std::vector<sf::Sprite> vEnemyTexture;
     std::vector<Enemy> vEnemyHP;
+
     sf::Sprite followEnemyShape(followEnemyTexture);
     followEnemyShape.setOrigin({followEnemyShape.getGlobalBounds().size.x/2,followEnemyShape.getGlobalBounds().size.y/2});
     followEnemyShape.setRotation(sf::degrees(180.f));
@@ -72,6 +91,12 @@ int main()
     sf::Sprite bulletShape(playerBulletTexture);
     std::vector<sf::Sprite> vBullet;
     std::vector<sf::Vector2f> bulletDirections;
+
+    //enemy bullet
+    sf::Sprite enemyBulletShape(enemyBulletTexture);
+    enemyBulletShape.setOrigin({enemyBulletShape.getGlobalBounds().size.x/2,enemyBulletShape.getGlobalBounds().size.y/2});
+    enemyBulletShape.setRotation(sf::degrees(180.f));
+    std::vector<sf::Sprite> vEnemyBullet;
 
     
     //Player factor
@@ -125,16 +150,26 @@ int main()
     window.clear(sf::Color(124,124,124));
 
     //EnemySpawn 
-        if (enemySpawnTimer < 50) enemySpawnTimer++;
-        if (enemySpawnTimer >= 50) 
+        if (enemySpawnTimer < 200) enemySpawnTimer++;
+        if (enemySpawnTimer >= 200) 
     {
         enemySpawnTimer = 0;
-        vEnemyTexture.push_back(followEnemyShape);
-        vEnemyHP.push_back(e1);
+        int Rand = rand()%2;
+        if (Rand == 0)
+        {  
+            vEnemyTexture.push_back(enemyShape);
+            vEnemyHP.push_back(e0);
+        }
+        if (Rand == 1)
+        {
+            vEnemyTexture.push_back(followEnemyShape);
+            vEnemyHP.push_back(e1);
+        }
         float R = rand() % (int)window.getSize().x;
         if (R > window.getSize().x / 2) 
         vEnemyTexture.back().setPosition({ R - vEnemyTexture.back().getGlobalBounds().size.x, 0.f });
         else vEnemyTexture.back().setPosition({ R + vEnemyTexture.back().getGlobalBounds().size.x, 0.f });
+
 
     }
 
@@ -152,6 +187,17 @@ int main()
             window.draw(vEnemyTexture[i]);//draw
             if(vEnemyHP[i].type == 0)vEnemyTexture[i].move({0.f,2.f*vEnemyHP[i].speed});//move
             if(vEnemyHP[i].type == 1)vEnemyTexture[i].move(enemyAimDirNorm*vEnemyHP[i].speed);//move
+
+            //enemy shoot
+            
+            if(vEnemyHP[i].type == 0 && vEnemyHP[i].shootTimer < 50) vEnemyHP[i].shootTimer++;
+            if(vEnemyHP[i].type == 0 && vEnemyHP[i].shootTimer >= 50) 
+        {
+            vEnemyBullet.push_back(enemyBulletShape);
+            vEnemyBullet.back().setScale({0.5,0.5});
+            vEnemyBullet.back().setPosition(vEnemyTexture[i].getPosition());
+            vEnemyHP[i].shootTimer = 0;
+        }
 
             //collision
             if(vEnemyTexture[i].getGlobalBounds().findIntersection(playerShape.getGlobalBounds())) {vEnemyTexture.erase(vEnemyTexture.begin()+i); 
@@ -194,6 +240,26 @@ int main()
                     break;
                 }
             }
+    }
+
+    //enemy Bullet
+    for (int i = 0; i < vEnemyBullet.size() ; i++)
+    {
+        window.draw(vEnemyBullet[i]);
+        vEnemyBullet[i].move({0.f,10.f});
+        //out
+        if(vEnemyBullet[i].getPosition().y <= -10) {vEnemyBullet.erase(vEnemyBullet.begin() + i); break;}
+          
+            //player collision 
+            if(vEnemyBullet[i].getGlobalBounds().findIntersection(playerShape.getGlobalBounds()))
+            {
+                
+                player.HP--;//dmg
+                
+                vEnemyBullet.erase(vEnemyBullet.begin() + i);
+                break;
+            }
+        
     }
 
     
