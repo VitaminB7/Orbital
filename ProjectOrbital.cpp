@@ -56,11 +56,11 @@ int main()
     window.setFramerateLimit(144);
 
     //texture
-    sf::Texture playerTexture("C:/CPLUSPLUS/Project/Ui/Player/SpaceShooterShipConstructor/PNG/Example/01.png"); 
-    sf::Texture playerBulletTexture("C:/CPLUSPLUS/Project/Ui/Player/SpaceShooterShipConstructor/PNG/Bullets/01.png");   
-    sf::Texture followEnemyTexture("C:/CPLUSPLUS/Project/Ui/Player/SpaceShooterShipConstructor/PNG/Example/14.png");
-    sf::Texture enemyTexture("C:/CPLUSPLUS/Project/Ui/Player/SpaceShooterShipConstructor/PNG/Example/01.png");
-    sf::Texture enemyBulletTexture("C:/CPLUSPLUS/Project/Ui/Player/SpaceShooterShipConstructor/PNG/Bullets/02.png");
+    sf::Texture playerTexture("SpaceShooterShipConstructor/PNG/Example/01.png");
+    sf::Texture enemyTexture("SpaceShooterShipConstructor/PNG/Example/05.png");
+    sf::Texture followEnemyTexture("SpaceShooterShipConstructor/PNG/Example/14.png");
+    sf::Texture playerBulletTexture("SpaceShooterShipConstructor/PNG/Bullets/01.png");
+    sf::Texture enemyBulletTexture("SpaceShooterShipConstructor/PNG/Bullets/02.png");
 
     //player
     Player player;
@@ -91,6 +91,7 @@ int main()
     sf::Sprite bulletShape(playerBulletTexture);
     std::vector<sf::Sprite> vBullet;
     std::vector<sf::Vector2f> bulletDirections;
+    bulletShape.setOrigin({bulletShape.getGlobalBounds().size.x/2-85,bulletShape.getGlobalBounds().size.y/2});
 
     //enemy bullet
     sf::Sprite enemyBulletShape(enemyBulletTexture);
@@ -98,12 +99,21 @@ int main()
     enemyBulletShape.setRotation(sf::degrees(180.f));
     std::vector<sf::Sprite> vEnemyBullet;
 
+    //general factor
+    int wave = 1;
     
     //Player factor
     int shootTimer = 100;
+    int playerHitCD = 0;
+    bool isBlinking = false;
+    int blinkTimer = 0;
+    int blinkDuration = 120;
 
     //Enemy factor
     int enemySpawnTimer=2000;
+    int enemiesToSpawn = 5; 
+    int enemiesSpawned = 0;
+    int enemiesRemaining = 0;
 
 //=============================================================================================//
 
@@ -135,7 +145,7 @@ int main()
     if(playerShape.getPosition().y <= 0) playerShape.setPosition({playerShape.getPosition().x,0.f});//top
     if(playerShape.getPosition().y + playerShape.getGlobalBounds().size.y >= window.getSize().y) playerShape.setPosition({playerShape.getPosition().x,window.getSize().y - playerShape.getGlobalBounds().size.y});//bottom
 
-
+    if(playerHitCD  > 0) playerHitCD--;
     //player shoot
     if(shootTimer < 10) shootTimer++;
     if(sf::Mouse::isButtonPressed(sf::Mouse::Button::Left) && shootTimer >=10)
@@ -143,6 +153,18 @@ int main()
             vBullet.push_back(bulletShape);
             vBullet.back().setScale({0.5,0.5});
             vBullet.back().setPosition(playerShape.getPosition());
+            bulletDirections.push_back({0.f, -10.f});
+
+            vBullet.push_back(bulletShape);
+            vBullet.back().setScale({0.5,0.5});
+            vBullet.back().setPosition(playerShape.getPosition());
+            bulletDirections.push_back({-5.f, -10.f});
+
+            vBullet.push_back(bulletShape);
+            vBullet.back().setScale({0.5,0.5});
+            vBullet.back().setPosition(playerShape.getPosition());
+            bulletDirections.push_back({5.f, -10.f});
+        
             shootTimer = 0;
     }
     
@@ -151,7 +173,7 @@ int main()
 
     //EnemySpawn 
         if (enemySpawnTimer < 200) enemySpawnTimer++;
-        if (enemySpawnTimer >= 200) 
+        if (enemySpawnTimer >= 50 && enemiesSpawned < enemiesToSpawn)
     {
         enemySpawnTimer = 0;
         int Rand = rand()%2;
@@ -169,8 +191,9 @@ int main()
         if (R > window.getSize().x / 2) 
         vEnemyTexture.back().setPosition({ R - vEnemyTexture.back().getGlobalBounds().size.x, 0.f });
         else vEnemyTexture.back().setPosition({ R + vEnemyTexture.back().getGlobalBounds().size.x, 0.f });
-
-
+        //wave operator
+        enemiesSpawned++;
+        enemiesRemaining++;
     }
 
     //Enemy
@@ -200,25 +223,40 @@ int main()
         }
 
             //collision
-            if(vEnemyTexture[i].getGlobalBounds().findIntersection(playerShape.getGlobalBounds())) {vEnemyTexture.erase(vEnemyTexture.begin()+i); 
+            if(vEnemyTexture[i].getGlobalBounds().findIntersection(playerShape.getGlobalBounds()) and playerHitCD <= 0) {vEnemyTexture.erase(vEnemyTexture.begin()+i); 
             vEnemyHP.erase(vEnemyHP.begin()+i); 
             player.HP--;
+            playerHitCD = 120;
+            isBlinking = true; // Blinking
+            blinkTimer = 0; 
+            enemiesRemaining--; 
 
             break;} //player
             if(vEnemyTexture[i].getPosition().y>window.getSize().y){
-                vEnemyTexture.erase(vEnemyTexture.begin()+i); 
+                vEnemyTexture.erase(vEnemyTexture.begin()+i);
                 vEnemyHP.erase(vEnemyHP.begin()+i); 
+                enemiesRemaining--;
                 break;
             } //out(bottom)
         }
+        if (enemiesRemaining == 0 && enemiesSpawned >= enemiesToSpawn) {
+        wave++;
+        enemiesToSpawn += 5; 
+        enemiesSpawned = 0;
+    }
 
     //player Bullet
     for (int i = 0; i < vBullet.size() ; i++)
     {
         window.draw(vBullet[i]);
-        vBullet[i].move({0.f,-10.f});
+        vBullet[i].move(bulletDirections[i]);
         //bullet go out
-        if(vBullet[i].getPosition().y <= -10) {vBullet.erase(vBullet.begin() + i); break;}
+        if(vBullet[i].getPosition().y <= -10) {
+                vBullet.erase(vBullet.begin() + i);
+                bulletDirections.erase(bulletDirections.begin() + i);
+                i--; 
+                break;
+            }
         
         //enemy collision
         for (int k = 0; k < vEnemyTexture.size(); k++)
@@ -231,6 +269,7 @@ int main()
                     if (vEnemyHP[k].HP <= 0) {
                     vEnemyTexture.erase(vEnemyTexture.begin() + k);
                     vEnemyHP.erase(vEnemyHP.begin() + k);
+                    enemiesRemaining--;
 
                     }
                     
@@ -251,16 +290,36 @@ int main()
         if(vEnemyBullet[i].getPosition().y <= -10) {vEnemyBullet.erase(vEnemyBullet.begin() + i); break;}
           
             //player collision 
-            if(vEnemyBullet[i].getGlobalBounds().findIntersection(playerShape.getGlobalBounds()))
+            if(vEnemyBullet[i].getGlobalBounds().findIntersection(playerShape.getGlobalBounds()) and playerHitCD <= 0)
             {
                 
                 player.HP--;//dmg
-                
+                playerHitCD = 120;
                 vEnemyBullet.erase(vEnemyBullet.begin() + i);
+                isBlinking = true; // Blinking
+                blinkTimer = 0; 
+                i--;
                 break;
             }
         
     }
+                // Blinking
+                if (isBlinking) {
+                    blinkTimer++;
+                    if (blinkTimer % 20 == 0) {
+                        if (playerShape.getColor().a == 255) { 
+                            playerShape.setColor(sf::Color(255, 255, 255, 100)); 
+                        } else {
+                            playerShape.setColor(sf::Color(255, 255, 255, 255)); 
+                        }
+                }
+
+                //stopBlinking
+                if (blinkTimer >= blinkDuration) {
+                    isBlinking = false; 
+                    playerShape.setColor(sf::Color(255, 255, 255, 255)); 
+                }
+            }
 
     
     //draw
