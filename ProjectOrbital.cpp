@@ -2,8 +2,10 @@
 #include <SFML/Graphics.hpp>
 #include <vector>
 #include <cmath>
+#include <ctime>
 
 using namespace std;
+
 
 class Player
 { 
@@ -11,10 +13,12 @@ public:
 
     int HP;
     int HPmax;
+    int Pdmg;
     
     Player(){
-        HPmax=10;
+        HPmax=5;
         HP=HPmax;
+        Pdmg = 1;
     }
 
 };
@@ -23,27 +27,28 @@ class Enemy
 {
 public: 
      
+    float bulletSpeed = 1; 
+
     int HP;
     int HPmax;
     int type;
     int shootTimer;
     float speed;
 
-    float bulletSpeed = 1; 
-
-    Enemy(int a){
-        type = a;
-        HPmax=3;
-        HP=HPmax;
-        speed = 2;
-    }
 
     Enemy(){
         type = 0;
         HPmax=3;
         HP=HPmax;
-        shootTimer = 2000;
+        shootTimer = 1000;
         speed = 1;
+    }
+
+    Enemy(int a){
+        type = a;
+        HPmax= 1;
+        HP=HPmax;
+        speed = 5;
     }
 
 };
@@ -52,22 +57,39 @@ int main()
 {
     sf::ContextSettings setting;
     setting.antiAliasingLevel = 4;
-    sf::RenderWindow window(sf::VideoMode({800,800}),"Orbital",sf::Style::Close, sf::State::Windowed, setting);
-    window.setFramerateLimit(144);
+    sf::RenderWindow window(sf::VideoMode({800,800}),"Orbital", sf::State::Windowed, setting);
+    window.setFramerateLimit(120);
 
+    
     //texture
     sf::Texture playerTexture("SpaceShooterShipConstructor/PNG/Example/01.png");
     sf::Texture enemyTexture("SpaceShooterShipConstructor/PNG/Example/05.png");
     sf::Texture followEnemyTexture("SpaceShooterShipConstructor/PNG/Example/14.png");
     sf::Texture playerBulletTexture("SpaceShooterShipConstructor/PNG/Bullets/01.png");
+    sf::Texture playerUltimateBulletTexture("SpaceShooterShipConstructor/PNG/Bullets/12.png");
     sf::Texture enemyBulletTexture("SpaceShooterShipConstructor/PNG/Bullets/02.png");
-
+    sf::Texture upgradeWeapon("SpaceShooterShipConstructor/PNG/Addmore/upgrade_icon.png");
+    sf::Texture Heal("SpaceShooterShipConstructor/PNG/Addmore/heal.png");
+    sf::Texture ShieldIcon("SpaceShooterShipConstructor/PNG/Addmore/shield_icon.png");
+    sf::Texture ShieldActive("SpaceShooterShipConstructor/PNG/Addmore/shield_active.png");
+    
     //player
     Player player;
     sf::Sprite playerShape(playerTexture);
     playerShape.setScale({0.5f,0.5f});
-    playerShape.setPosition({500,500});
     sf::Vector2f playerCenter;
+    sf::Vector2f mouse(sf::Mouse::getPosition());
+    playerShape.setPosition({500,500});
+
+    //upgrade
+    std::vector<int> vType;
+    sf::Sprite upWeapon(upgradeWeapon);
+    upWeapon.setScale({0.2f,0.2f});
+    std::vector<sf::Sprite> vUpWeapon;
+    sf::Sprite shieldActive(ShieldActive);
+    shieldActive.setOrigin({shieldActive.getGlobalBounds().size.x/2-85,shieldActive.getGlobalBounds().size.y/2});
+    sf::Sprite shieldIcon(ShieldIcon);
+    sf::Sprite heal(Heal);
 
     //enemy
     Enemy e0;
@@ -75,24 +97,28 @@ int main()
     sf::Sprite enemyShape(enemyTexture);
     enemyShape.setOrigin({enemyShape.getGlobalBounds().size.x/2,enemyShape.getGlobalBounds().size.y/2});
     enemyShape.setRotation(sf::degrees(180.f));
-    enemyShape.scale({0.8,0.8});
+    enemyShape.scale({0.6f,0.6f});
     std::vector<sf::Sprite> vEnemyTexture;
     std::vector<Enemy> vEnemyHP;
-
+    
     sf::Sprite followEnemyShape(followEnemyTexture);
     followEnemyShape.setOrigin({followEnemyShape.getGlobalBounds().size.x/2,followEnemyShape.getGlobalBounds().size.y/2});
     followEnemyShape.setRotation(sf::degrees(180.f));
-    followEnemyShape.scale({0.8f,0.8f});
+    followEnemyShape.scale({0.4f,0.4f});
     sf::Vector2f followEnemyPOS;
     sf::Vector2f enemyAimDir;
     sf::Vector2f enemyAimDirNorm;
 
+
+
     //player bullet
     sf::Sprite bulletShape(playerBulletTexture);
+    sf::Sprite ultimatebullet(playerUltimateBulletTexture);
+    bulletShape.setOrigin({bulletShape.getGlobalBounds().size.x/2-85,bulletShape.getGlobalBounds().size.y/2});
     std::vector<sf::Sprite> vBullet;
     std::vector<sf::Vector2f> bulletDirections;
-    bulletShape.setOrigin({bulletShape.getGlobalBounds().size.x/2-85,bulletShape.getGlobalBounds().size.y/2});
-
+    
+    
     //enemy bullet
     sf::Sprite enemyBulletShape(enemyBulletTexture);
     enemyBulletShape.setOrigin({enemyBulletShape.getGlobalBounds().size.x/2,enemyBulletShape.getGlobalBounds().size.y/2});
@@ -100,103 +126,140 @@ int main()
     std::vector<sf::Sprite> vEnemyBullet;
 
     //general factor
-    int wave = 1;
-    
-    //Player factor
     int shootTimer = 100;
-    int playerHitCD = 0;
-    bool isBlinking = false;
-    int blinkTimer = 0;
-    int blinkDuration = 120;
-
-    //Enemy factor
+    int wave = 1;
+    int RandUpgrade = 0;
+    int powerup = 0;
+    int powerupCD = 0;
+    //enemy factor
     int enemySpawnTimer=2000;
     int enemiesToSpawn = 5; 
     int enemiesSpawned = 0;
     int enemiesRemaining = 0;
+    //player factor
+    int playerHitCD = 0;
+    bool isBlinking = false;
+    int blinkTimer = 0;
+    int blinkDuration = 120;
+    bool ultimate = false;
+    bool getfirst = false;
+    int ultimateTime = 0;
+    bool shield = false;
+    int shieldtimer = 0;
 
-//=============================================================================================//
-
+ //***************************************************************************************** 
     while (window.isOpen())
-    {
-        while(std::optional event = window.pollEvent())
         {
-            //close
-            if(event->is<sf::Event::Closed>()) window.close();
+            while(std::optional event = window.pollEvent())
+            {
+                //close
+                if(event->is<sf::Event::Closed>()) window.close();
+            }
 
-        }
+        //update
 
-    //update
-
-    srand(time(0));
-
-    //movement
-    if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::W))
-    playerShape.move({0.f,-10.f});
-    if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::A))
-    playerShape.move({-10.f,0.f});
-    if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::S))
-    playerShape.move({0.f,10.f});
-    if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::D))
-    playerShape.move({10.f,0.f});
-    
-    if(playerShape.getPosition().x <= 0) playerShape.setPosition({0.f,playerShape.getPosition().y});//left
-    if(playerShape.getPosition().x + playerShape.getGlobalBounds().size.x  >= window.getSize().x) playerShape.setPosition({window.getSize().x - playerShape.getGlobalBounds().size.x ,playerShape.getPosition().y});//right
-    if(playerShape.getPosition().y <= 0) playerShape.setPosition({playerShape.getPosition().x,0.f});//top
-    if(playerShape.getPosition().y + playerShape.getGlobalBounds().size.y >= window.getSize().y) playerShape.setPosition({playerShape.getPosition().x,window.getSize().y - playerShape.getGlobalBounds().size.y});//bottom
-
-    if(playerHitCD  > 0) playerHitCD--;
-    //player shoot
-    if(shootTimer < 10) shootTimer++;
-    if(sf::Mouse::isButtonPressed(sf::Mouse::Button::Left) && shootTimer >=10)
-    {
-            vBullet.push_back(bulletShape);
-            vBullet.back().setScale({0.5,0.5});
-            vBullet.back().setPosition(playerShape.getPosition());
-            bulletDirections.push_back({0.f, -10.f});
-
-            vBullet.push_back(bulletShape);
-            vBullet.back().setScale({0.5,0.5});
-            vBullet.back().setPosition(playerShape.getPosition());
-            bulletDirections.push_back({-5.f, -10.f});
-
-            vBullet.push_back(bulletShape);
-            vBullet.back().setScale({0.5,0.5});
-            vBullet.back().setPosition(playerShape.getPosition());
-            bulletDirections.push_back({5.f, -10.f});
+        srand(time(0));
         
-            shootTimer = 0;
-    }
-    
-    //clear
-    window.clear(sf::Color(124,124,124));
+        if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::W))
+        playerShape.move({0.f,-5.f});
+        if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::A))
+        playerShape.move({-5.f,0.f});
+        if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::S))
+        playerShape.move({0.f,5.f});
+        if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::D))
+        playerShape.move({5.f,0.f});
+        //player move
+        if(playerShape.getPosition().x <= 0) playerShape.setPosition({0.f,playerShape.getPosition().y});//left
+        if(playerShape.getPosition().x + playerShape.getGlobalBounds().size.x  >= window.getSize().x) playerShape.setPosition({window.getSize().x - playerShape.getGlobalBounds().size.x ,playerShape.getPosition().y});//right
+        if(playerShape.getPosition().y <= 0) playerShape.setPosition({playerShape.getPosition().x,0.f});//top
+        if(playerShape.getPosition().y + playerShape.getGlobalBounds().size.y >= window.getSize().y) playerShape.setPosition({playerShape.getPosition().x,window.getSize().y - playerShape.getGlobalBounds().size.y});//bottom
+        //player cd
+        if(shootTimer < 20) shootTimer++;
+        if(playerHitCD  > 0) playerHitCD--;
 
-    //EnemySpawn 
-        if (enemySpawnTimer < 200) enemySpawnTimer++;
-        if (enemySpawnTimer >= 50 && enemiesSpawned < enemiesToSpawn)
+        //player shoot
+
+if(sf::Mouse::isButtonPressed(sf::Mouse::Button::Left) && shootTimer >=20)
+{
+    //Player shoot bullet
+    if(!ultimate) {
+        vBullet.push_back(bulletShape);
+        vBullet.back().setScale({0.5f, 0.5f}); 
+    }
+    else {
+        vBullet.push_back(ultimatebullet);
+        vBullet.back().setScale({1.f, 1.f}); 
+    }
+    vBullet.back().setPosition(playerShape.getPosition());
+    bulletDirections.push_back({0.f, -10.f});
+    if(powerup >= 1){
+        if(!ultimate) {
+            vBullet.push_back(bulletShape);
+            vBullet.back().setScale({0.5f, 0.5f}); 
+        }
+        else {
+            vBullet.push_back(ultimatebullet);
+            vBullet.back().setScale({1.f, 1.f}); 
+        }
+        vBullet.back().setPosition(playerShape.getPosition());
+        bulletDirections.push_back({-3.f, -10.f});
+
+        if(!ultimate) {
+            vBullet.push_back(bulletShape);
+            vBullet.back().setScale({0.5f, 0.5f});
+        }
+        else {
+            vBullet.push_back(ultimatebullet);
+            vBullet.back().setScale({1.f, 1.f});
+        }
+        vBullet.back().setPosition(playerShape.getPosition());
+        bulletDirections.push_back({3.f, -10.f});
+    }
+    if(powerup >= 2){
+        vBullet.push_back(ultimatebullet);
+        vBullet.back().setScale({1.f, 1.f}); 
+        vBullet.back().setPosition(playerShape.getPosition());
+        bulletDirections.push_back({-6.f, -10.f});
+
+        vBullet.push_back(ultimatebullet);
+        vBullet.back().setScale({1.f, 1.f});
+        vBullet.back().setPosition(playerShape.getPosition());
+        bulletDirections.push_back({6.f, -10.f});
+    }
+    shootTimer = 0;
+}
+
+
+        
+        //clear
+        window.clear(sf::Color(124,124,124));
+        //draw
+        window.draw(playerShape);
+
+        //EnemySpawn 
+        if (enemySpawnTimer < 50) enemySpawnTimer++;
+        if (enemySpawnTimer >= 50 && enemiesSpawned < enemiesToSpawn) 
     {
         enemySpawnTimer = 0;
-        int Rand = rand()%2;
-        if (Rand == 0)
-        {  
-            vEnemyTexture.push_back(enemyShape);
-            vEnemyHP.push_back(e0);
+        int Rand = rand() % 2;
+        if (Rand == 0) {
+        vEnemyTexture.push_back(enemyShape);
+        vEnemyHP.push_back(e0);
         }
-        if (Rand == 1)
-        {
+        if (Rand == 1) {
             vEnemyTexture.push_back(followEnemyShape);
             vEnemyHP.push_back(e1);
         }
         float R = rand() % (int)window.getSize().x;
-        if (R > window.getSize().x / 2) 
-        vEnemyTexture.back().setPosition({ R - vEnemyTexture.back().getGlobalBounds().size.x, 0.f });
+        if (R > window.getSize().x / 2) vEnemyTexture.back().setPosition({ R - vEnemyTexture.back().getGlobalBounds().size.x, 0.f });
         else vEnemyTexture.back().setPosition({ R + vEnemyTexture.back().getGlobalBounds().size.x, 0.f });
         //wave operator
         enemiesSpawned++;
         enemiesRemaining++;
     }
-
-    //Enemy
+    
+        
+            //Enemy
         for (int i = 0; i < vEnemyTexture.size() ; i++)
         {
            
@@ -222,87 +285,195 @@ int main()
             vEnemyHP[i].shootTimer = 0;
         }
 
-            //collision
-            if(vEnemyTexture[i].getGlobalBounds().findIntersection(playerShape.getGlobalBounds()) and playerHitCD <= 0) {vEnemyTexture.erase(vEnemyTexture.begin()+i); 
-            vEnemyHP.erase(vEnemyHP.begin()+i); 
-            player.HP--;
-            playerHitCD = 120;
-            isBlinking = true; // Blinking
-            blinkTimer = 0; 
-            enemiesRemaining--; 
-
-            break;} //player
+            //collision to player
+            if(vEnemyTexture[i].getGlobalBounds().findIntersection(playerShape.getGlobalBounds()) and playerHitCD <= 0) {
+                if(shield){
+                    vEnemyTexture.erase(vEnemyTexture.begin()+i); 
+                    vEnemyHP.erase(vEnemyHP.begin()+i); 
+                    enemiesRemaining--;
+                    i--;
+                } 
+                else{
+                    vEnemyTexture.erase(vEnemyTexture.begin()+i); 
+                    vEnemyHP.erase(vEnemyHP.begin()+i); 
+                    player.HP--;
+                    playerHitCD = 120;
+                    isBlinking = true; // Blinking
+                    blinkTimer = 0; 
+                    enemiesRemaining--; 
+                    break;
+                }   
+            }
             if(vEnemyTexture[i].getPosition().y>window.getSize().y){
-                vEnemyTexture.erase(vEnemyTexture.begin()+i);
+                vEnemyTexture.erase(vEnemyTexture.begin()+i); 
                 vEnemyHP.erase(vEnemyHP.begin()+i); 
                 enemiesRemaining--;
                 break;
             } //out(bottom)
+
         }
+        //wave operator
         if (enemiesRemaining == 0 && enemiesSpawned >= enemiesToSpawn) {
         wave++;
         enemiesToSpawn += 5; 
         enemiesSpawned = 0;
+        e0.speed += 0.25;
+        e0.HPmax++;
+        e1.speed += 0.5;
+        e1.HPmax++;
     }
-
-    //player Bullet
-    for (int i = 0; i < vBullet.size() ; i++)
-    {
-        window.draw(vBullet[i]);
-        vBullet[i].move(bulletDirections[i]);
-        //bullet go out
-        if(vBullet[i].getPosition().y <= -10) {
+        
+            //player Bullet
+        for (int i = 0; i < vBullet.size() ; i++)
+        {
+            window.draw(vBullet[i]);
+            vBullet[i].move(bulletDirections[i]);
+            //out
+            if(vBullet[i].getPosition().y <= -10) {
                 vBullet.erase(vBullet.begin() + i);
                 bulletDirections.erase(bulletDirections.begin() + i);
                 i--; 
                 break;
             }
-        
-        //enemy collision
-        for (int k = 0; k < vEnemyTexture.size(); k++)
+              
+                //enemy collision when got bullet
+            
+            for (int k = 0; k < vEnemyTexture.size(); k++)
             {
                 if(vBullet[i].getGlobalBounds().findIntersection(vEnemyTexture[k].getGlobalBounds()))
                 {
-                            
-                    vEnemyHP[k].HP--;//dmg
-                            
-                    if (vEnemyHP[k].HP <= 0) {
-                    vEnemyTexture.erase(vEnemyTexture.begin() + k);
-                    vEnemyHP.erase(vEnemyHP.begin() + k);
-                    enemiesRemaining--;
-
-                    }
                     
+                    vEnemyHP[k].HP -= player.Pdmg;//dmg
+                    
+                    if (vEnemyHP[k].HP <= 0) {
+                        if(powerupCD <= 0){
+                            int dropChance = rand()%2;
+                            if(dropChance == 1){
+                                int dropItem = rand()%3;
+                                if(dropItem == 0){
+                                    vUpWeapon.push_back(sf::Sprite(upgradeWeapon));
+                                    vUpWeapon.back().setScale({0.2f, 0.2f});
+                                    vUpWeapon.back().setPosition(vEnemyTexture[k].getPosition());
+                                    vType.push_back(1);
+                                    powerupCD = 120*3;
+                                }
+                                if(dropItem == 1){
+                                    vUpWeapon.push_back(sf::Sprite(heal));
+                                    vUpWeapon.back().setScale({0.1f, 0.1f});
+                                    vUpWeapon.back().setPosition(vEnemyTexture[k].getPosition());
+                                    vType.push_back(2);
+                                    powerupCD = 120*3;
+                                }
+                                if(dropItem == 2){
+                                    vUpWeapon.push_back(sf::Sprite(shieldIcon));
+                                    vUpWeapon.back().setScale({0.2f, 0.2f});
+                                    vUpWeapon.back().setPosition(vEnemyTexture[k].getPosition());
+                                    vType.push_back(3);
+                                    powerupCD = 120*3;
+                                }
+                            }
+                        }
+                        vEnemyTexture.erase(vEnemyTexture.begin() + k);
+                        vEnemyHP.erase(vEnemyHP.begin() + k);
+                        enemiesRemaining--;
+                    }
+        
                     vBullet.erase(vBullet.begin() + i);
                     bulletDirections.erase(bulletDirections.begin() + i);
                     i--;
                     break;
                 }
             }
-    }
+        }
 
-    //enemy Bullet
-    for (int i = 0; i < vEnemyBullet.size() ; i++)
-    {
-        window.draw(vEnemyBullet[i]);
-        vEnemyBullet[i].move({0.f,10.f});
-        //out
-        if(vEnemyBullet[i].getPosition().y <= -10) {vEnemyBullet.erase(vEnemyBullet.begin() + i); break;}
-          
-            //player collision 
-            if(vEnemyBullet[i].getGlobalBounds().findIntersection(playerShape.getGlobalBounds()) and playerHitCD <= 0)
+        //enemy Bullet
+        for (int i = 0; i < vEnemyBullet.size() ; i++)
+        {
+            window.draw(vEnemyBullet[i]);
+            vEnemyBullet[i].move({0.f,10.f});
+            //out
+            if(vEnemyBullet[i].getPosition().y <= -10) {vEnemyBullet.erase(vEnemyBullet.begin() + i); i--;break;}
+              
+                //player collision 
+                if(vEnemyBullet[i].getGlobalBounds().findIntersection(playerShape.getGlobalBounds()) and playerHitCD <= 0)
+                {
+                    if(shield){
+                        vEnemyBullet.erase(vEnemyBullet.begin() + i);
+                        i--;
+                    }
+                    else{
+                        player.HP--;//dmg
+                        playerHitCD = 120;
+                        isBlinking = true; // Blinking
+                        blinkTimer = 0; 
+                        vEnemyBullet.erase(vEnemyBullet.begin() + i);
+                        i--;
+                        break;
+                    }
+                }
+            
+        }
+        //powerup
+        for(int i = 0;i < vUpWeapon.size();i++){
+            window.draw(vUpWeapon[i]);
+            vUpWeapon[i].move({0.f,2.f});
+            if (vUpWeapon[i].getGlobalBounds().findIntersection(playerShape.getGlobalBounds()) ) {
+                if (vType[i] == 1) {
+                    powerup += 1;
+                    getfirst = true;
+                    vUpWeapon.erase(vUpWeapon.begin() + i);
+                    vType.erase(vType.begin() + i);
+                    i--;
+                } 
+                else if (vType[i] == 2) {
+                    player.HP++;
+                    if (player.HP > player.HPmax) player.HP = player.HPmax;
+                    vUpWeapon.erase(vUpWeapon.begin() + i);
+                    vType.erase(vType.begin() + i);
+                    i--;
+                } 
+                else if (vType[i] == 3) {
+                    shield = true;
+                    shieldtimer = 120*2;
+                    vUpWeapon.erase(vUpWeapon.begin() + i);
+                    vType.erase(vType.begin() + i);
+                    i--;
+                }
+
+            
+        }
+        if (vUpWeapon[i].getPosition().y >= window.getSize().y)
             {
-                
-                player.HP--;//dmg
-                playerHitCD = 120;
-                vEnemyBullet.erase(vEnemyBullet.begin() + i);
-                isBlinking = true; // Blinking
-                blinkTimer = 0; 
+                vUpWeapon.erase(vUpWeapon.begin() + i);
+                vType.erase(vType.begin() + i); 
                 i--;
-                break;
             }
-        
     }
+    //powerup
+    if(powerupCD >= 0) powerupCD--;
+
+    if(powerup >= 2 and !ultimate) {
+        ultimate = true;
+        ultimateTime = 120*3;
+    }
+    if(ultimateTime > 0) ultimateTime--;
+    if(ultimateTime <= 0) {
+        ultimate = false;
+        if(getfirst) powerup = 1;
+        player.Pdmg = 1;
+    }
+    if(ultimate) player.Pdmg = 3;
+    //shield
+    if(shield){
+        shieldActive.setPosition(playerShape.getPosition());
+        shieldActive.setScale({0.5,0.5});
+        window.draw(shieldActive);
+    }
+    if(shieldtimer <= 0){
+        shield = false;
+    }
+    if(shieldtimer >= 0) shieldtimer--;
+
                 // Blinking
                 if (isBlinking) {
                     blinkTimer++;
@@ -321,14 +492,14 @@ int main()
                 }
             }
 
-    
-    //draw
-    window.draw(playerShape);
-    
-    //show
-    window.display();
+        cout<<"Player HP : "<<player.HP<<'\n';
+        // if (player.HP<=0){cout<<"Player die"; }
+        cout << "time = " << shieldtimer << endl;
 
- 
-    }
-    return 0;
+        window.display();
+       
+        }
+
+    return 0;//code แม่งโคตร KEYES
+
 }
