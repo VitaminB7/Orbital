@@ -1,9 +1,11 @@
 #include <iostream>
 #include <SFML/Graphics.hpp>
+#include <SFML/Audio.hpp>
 #include <vector>
 #include <cmath>
 #include <ctime>
 #include "MainMenu.h"
+#include "effect.h"
 
 using namespace std;
 
@@ -56,87 +58,6 @@ public:
 
 };
 
-MainMenu::MainMenu(float width, float height)
-{
-    if (!fonts.openFromFile("Fonts/TypeLightSans-KV84p.otf")) {
-        std::cerr << "Error: Failed to load font\n";
-        exit(1);  // ปิดโปรแกรมทันที
-    }
-
-    //Play
-    sf::Text playText(fonts);
-    playText.setFillColor(sf::Color::White);
-    playText.setString("Play");
-    playText.setCharacterSize(70);
-    playText.setPosition(sf::Vector2f(70, 300));
-    mainMenu.push_back(playText);
-    
-    //Option
-    sf::Text optionText(fonts);
-    optionText.setFillColor(sf::Color::White);
-    optionText.setString("Option");
-    optionText.setCharacterSize(70);
-    optionText.setPosition(sf::Vector2f(70, 400));
-    mainMenu.push_back(optionText);
-
-    //Exit
-    sf::Text exitText(fonts);
-    exitText.setFillColor(sf::Color::White);
-    exitText.setString("Exit");
-    exitText.setCharacterSize(70);
-    exitText.setPosition(sf::Vector2f(70, 500));
-    mainMenu.push_back(exitText);
-
-    mainMenuSelected = 0;
-}
-
-MainMenu::~MainMenu()
-{
-
-}
-
-//Draw MainMenu
-void MainMenu::draw(sf::RenderWindow& window)
-{
-    for (int i = 0; i < 3; i++)
-    {
-        window.draw(mainMenu[i]);
-    }
-}
-
-//move up
-void MainMenu::moveUp()
-{
-    if (mainMenuSelected - 1 >= -1)
-    {
-        mainMenu[mainMenuSelected].setFillColor(sf::Color::White);
-
-        mainMenuSelected--;
-        if (mainMenuSelected == -1)
-        {
-            mainMenuSelected = 2;
-        }
-        mainMenu[mainMenuSelected].setFillColor(sf::Color::Blue);
-    }
-}
-
-//move down
-void MainMenu::moveDown()
-{
-    if (mainMenuSelected + 1 <= 3)
-    {
-        mainMenu[mainMenuSelected].setFillColor(sf::Color::White);
-
-        mainMenuSelected++;
-        if (mainMenuSelected == 3)
-        {
-            mainMenuSelected = 0;
-        }
-        mainMenu[mainMenuSelected].setFillColor(sf::Color::Blue);
-    }
-}
-
-void BulletMoveAndCollision(std::vector<sf::Sprite> vector,sf::Sprite collisionShape);
 
 int main()
 {
@@ -154,11 +75,30 @@ int main()
     sf::Texture playerBulletTexture("SpaceShooterShipConstructor/PNG/Bullets/01.png");
     sf::Texture playerUltimateBulletTexture("SpaceShooterShipConstructor/PNG/Bullets/12.png");
     sf::Texture enemyBulletTexture("SpaceShooterShipConstructor/PNG/Bullets/02.png");
-    sf::Texture upgradeWeapon("/SpaceShooterShipConstructor/PNG/Addmore/upgrade_icon.png");
+    sf::Texture upgradeWeapon("SpaceShooterShipConstructor/PNG/Addmore/upgrade_icon.png");
     sf::Texture Heal("SpaceShooterShipConstructor/PNG/Addmore/heal.png");
     sf::Texture ShieldIcon("SpaceShooterShipConstructor/PNG/Addmore/shield_icon.png");
     sf::Texture ShieldActive("SpaceShooterShipConstructor/PNG/Addmore/shield_active.png");
     
+    sf::Texture effectTexture("Effect/effect.png");
+    sf::IntRect frame({0,0},{48,48});
+    sf::Sprite showEffect(effectTexture,frame);
+
+    // sound
+    sf::Music theme1("Sound/Theme.mp3");
+    theme1.setVolume(25);
+    theme1.play();
+
+    sf::SoundBuffer mExplode("Sound/mExplode.mp3");
+    sf::Sound effSound1(mExplode);
+    effSound1.setVolume(60);
+
+    sf::SoundBuffer bBullet("Sound/bullet.wav");
+    sf::Sound bulletSound(bBullet);
+ 
+    Effect effect;
+    std::vector<Effect> vEffect;
+
 //******************************************************************UI*************************************************************** */
     //Font Text
     sf::Font font("Fonts/TypeLightSans-KV84p.otf");
@@ -174,7 +114,7 @@ int main()
     obritalText.setCharacterSize(100);
     obritalText.setPosition(sf::Vector2f(70, 170));
     //Pause Game
-    sf::Texture button("C:/CPLUSPLUS/Project/Ui/Prop/button UI.png");
+    sf::Texture button("Prop/button UI.png");
     sf::IntRect pause1(sf::Vector2i(16*11, 16*9), sf::Vector2i(16, 16));
     sf::Sprite Pause(button);
     Pause.setTextureRect(pause1);
@@ -341,10 +281,10 @@ int main()
                     std::cout << "Exit"; window.close();
                 }      
             } 
-                window.clear();
+                //window.clear();
                 mainMenu.draw(window);
                 window.draw(obritalText);
-                window.display();
+                //window.display();
             }
             //Blink String
             if (blink) 
@@ -397,6 +337,7 @@ if (play) {
 if(sf::Mouse::isButtonPressed(sf::Mouse::Button::Left) && shootTimer >=20)
 {
     //Player shoot bullet
+    bulletSound.play();
     if(!ultimate) {
         vBullet.push_back(bulletShape);
         vBullet.back().setScale({0.5f, 0.5f}); 
@@ -448,6 +389,7 @@ if(sf::Mouse::isButtonPressed(sf::Mouse::Button::Left) && shootTimer >=20)
         
         //clear
         window.clear(sf::Color(124,124,124));
+        
         //draw
         window.draw(Pause); 
         window.draw(scoreText);
@@ -505,14 +447,18 @@ if(sf::Mouse::isButtonPressed(sf::Mouse::Button::Left) && shootTimer >=20)
             //collision to player
             if(vEnemyTexture[i].getGlobalBounds().findIntersection(playerShape.getGlobalBounds()) and playerHitCD <= 0) {
                 if(shield){
+                    vEffect.push_back(effect);
+                    vEffect.back().pos={vEnemyTexture[i].getPosition()};
                     vEnemyTexture.erase(vEnemyTexture.begin()+i); 
                     vEnemyHP.erase(vEnemyHP.begin()+i); 
                     enemiesRemaining--;
                     i--;
                 } 
                 else{
+                    vEffect.push_back(effect);
+                    vEffect.back().pos={vEnemyTexture[i].getPosition()}; 
                     vEnemyTexture.erase(vEnemyTexture.begin()+i); 
-                    vEnemyHP.erase(vEnemyHP.begin()+i); 
+                    vEnemyHP.erase(vEnemyHP.begin()+i);
                     player.HP--;
                     playerHitCD = 120;
                     isBlinking = true; // Blinking
@@ -590,6 +536,8 @@ if(sf::Mouse::isButtonPressed(sf::Mouse::Button::Left) && shootTimer >=20)
                                 }
                             }
                         }
+                        vEffect.push_back(effect);
+                        vEffect.back().pos={vEnemyTexture[k].getPosition()};
                         vEnemyTexture.erase(vEnemyTexture.begin() + k);
                         vEnemyHP.erase(vEnemyHP.begin() + k);
                         player.score++;
@@ -672,7 +620,7 @@ if(sf::Mouse::isButtonPressed(sf::Mouse::Button::Left) && shootTimer >=20)
 
     if(powerup >= 2 and !ultimate) {
         ultimate = true;
-        ultimateTime = 120*100;
+        ultimateTime = 120*5;
     }
     if(ultimateTime > 0) ultimateTime--;
     if(ultimateTime <= 0) {
@@ -724,12 +672,15 @@ if(sf::Mouse::isButtonPressed(sf::Mouse::Button::Left) && shootTimer >=20)
             if (Pause.getGlobalBounds().contains(mousePos) && !wasClickedPause){
                 pause = !pause;  
                 wasClickedPause = !wasClickedPause;
+
+            }    
+            if (pause) {
+
                 window.clear(sf::Color(124,124,124));
                 window.draw(resume);
                 window.draw(restart);
                 window.draw(exit);
-            }    
-            if (pause) {
+
                 if (resume.getGlobalBounds().contains(mousePos)) pause = !pause;  
                 if (restart.getGlobalBounds().contains(mousePos)) 
                 {
@@ -788,7 +739,13 @@ if(sf::Mouse::isButtonPressed(sf::Mouse::Button::Left) && shootTimer >=20)
                 sf::Vector2f mousePos = sf::Vector2f(sf::Mouse::getPosition(window)); 
                 if (home.getGlobalBounds().contains(mousePos)) ismainMenu = true;
             }
-        }
+        } 
+
+        for (int i = 0; i < vEffect.size(); i++)
+            {
+                vEffect[i].effectChange(showEffect,effSound1,vEffect.back().pos,window,pause);
+                if(vEffect[i].state>=8) {vEffect.erase(vEffect.begin()+i); i--; }
+            }
 
         window.display();
        
