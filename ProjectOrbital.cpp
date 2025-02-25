@@ -1,128 +1,7 @@
-#include <iostream>
-#include <SFML/Graphics.hpp>
-#include <SFML/Audio.hpp>
-#include <vector>
-#include <cmath>
-#include <ctime>
 #include "MainMenu.h"
 #include "effect.h"
-
+#include "function.h"
 using namespace std;
-
-
-class Player
-{ 
-public: 
-
-    int HP;
-    int HPmax;
-    int Pdmg;
-    int score;
-    
-    Player(){
-        HPmax= 30;
-        HP=HPmax;
-        Pdmg = 1;
-        score = 0;
-    }
-
-};
-
-class Enemy
-{
-public: 
-     
-    float bulletSpeed = 1; 
-
-    int HP;
-    int HPmax;
-    int limithp;
-    int type;
-    int shootTimer;
-    float speed;
-    float speedmax;
-
-
-    Enemy(){
-        type = 0;
-        limithp = 6;
-        HPmax=3;
-        HP=HPmax;
-        shootTimer = -30;
-        speed = 0.5;
-        speedmax = 5;
-    }
-
-    Enemy(int a){
-        if(a == 1){//follow Enemy
-            type = 1;
-            limithp = 2;
-            HPmax= 1;
-            HP=HPmax;
-            speed = 2;
-            speedmax = 5;
-        }
-        else if(a == 2){//Elite 1
-            type = 2;
-            limithp = 30;
-            HPmax= 20;
-            HP=HPmax;
-            speed = 1;
-            shootTimer = -30;
-        }
-        else if(a == 3){//missile
-            type = 3;
-            HPmax= 1;
-            limithp = 2;
-            HP=HPmax;
-            speed = 3;
-            speedmax = 6;
-        }
-        else if(a == 4){//Elite 2
-            type = 4;
-            HPmax= 30;
-            limithp = 40;
-            HP=HPmax;
-            speed = 1;
-            shootTimer = 0;
-        }
-    }
-
-};
-
-class Bullet
-{
-    public:
-    
-    char type;
-    sf::Sprite bulletSprite;
-    sf::Vector2f bulletDirection;
-    Bullet(sf::Texture &BulletTex,char C):bulletSprite(BulletTex),type(C){
-        switch (type)
-        {
-        case 'P':
-            bulletSprite.setOrigin({bulletSprite.getGlobalBounds().size.x/2-85,bulletSprite.getGlobalBounds().size.y/2});
-            bulletSprite.setScale({0.5f, 0.5f}); 
-            break;
-
-        case 'U':
-            bulletSprite.setScale({1.f, 1.f});
-            break;
-        
-        case 'e':
-            bulletSprite.setOrigin({bulletSprite.getGlobalBounds().size.x/2,bulletSprite.getGlobalBounds().size.y/2});
-            bulletSprite.setRotation(sf::degrees(180.f));
-            bulletSprite.setScale({0.5,0.5});
-            break;
-
-        case 'E':
-            bulletSprite.setOrigin({bulletSprite.getGlobalBounds().size.x/2-40,bulletSprite.getGlobalBounds().size.y/2+15});
-            bulletSprite.setRotation(sf::degrees(180.f));
-            break;
-
-        }
-    };
-};
 
 int main()
 {   
@@ -133,13 +12,13 @@ int main()
     sf::RenderWindow window(sf::VideoMode({1000,900}),"Orbital", sf::Style::Close , sf::State::Windowed, setting);
     MainMenu mainMenu({800,600});
     window.setFramerateLimit(framerate);
-
     
     //texture
     sf::Texture playerTexture("SpaceShooterShipConstructor/PNG/Example/01.png");
     sf::Texture enemyTexture("SpaceShooterShipConstructor/PNG/Example/05.png");
     sf::Texture enemyElite01("SpaceShooterShipConstructor/PNG/Example/07.png");
     sf::Texture enemyElite02("SpaceShooterShipConstructor/PNG/Example/10.png");
+    sf::Texture superEliteTexture("SpaceShooterShipConstructor/PNG/Example/02.png");
     sf::Texture followEnemyTexture("SpaceShooterShipConstructor/PNG/Example/14.png");
     sf::Texture playerBulletTexture("SpaceShooterShipConstructor/PNG/Bullets/01.png");
     sf::Texture playerUltimateBulletTexture("SpaceShooterShipConstructor/PNG/Bullets/12.png");
@@ -259,6 +138,7 @@ int main()
     Enemy elite01(2);
     Enemy elite02(4);
     Enemy missile(3);
+    Enemy superelite(5);
 
     sf::Sprite enemyShape(enemyTexture);
     enemyShape.setOrigin({enemyShape.getGlobalBounds().size.x/2,enemyShape.getGlobalBounds().size.y/2});
@@ -292,6 +172,11 @@ int main()
     missileShape.setRotation(sf::degrees(270.f));
     missileShape.scale({0.2f,0.2f});
 
+    sf::Sprite superEliteshape(superEliteTexture);
+    superEliteshape.setOrigin({enemyShape.getGlobalBounds().size.x/2,enemyShape.getGlobalBounds().size.y/2});
+    superEliteshape.setRotation(sf::degrees(180.f));
+    superEliteshape.scale({1.5f,1.5f});
+
     //Bullet
     Bullet playerBullet(playerBulletTexture,'P');
     Bullet ultimateBullet(playerUltimateBulletTexture,'U');
@@ -324,6 +209,11 @@ int main()
     int enemiesSpawned = 0;
     int wavePattern = 1;
     int currentPatterns = 1;
+    float direction = -1;
+    bool superelitespawn = false;
+    bool pull = false;
+    int pulltime = 300;
+    int pullcd = 0;
     //player factor
     int playerHitCD = 0;
     bool isBlinking = false;
@@ -336,22 +226,7 @@ int main()
     int shieldtimer = 0;
     int checkpow = 0;
 
-    void SpawnEnemyPattern(int pattern, int numEnemies, sf::RenderWindow &window, 
-        vector<sf::Sprite> &vEnemyTexture, vector<Enemy> &vEnemyHP, 
-        sf::Sprite enemyShape, Enemy e0);
-    void SpawnEnemyfollow(int numEnemies, sf::RenderWindow &window, 
-        vector<sf::Sprite> &vEnemyTexture, vector<Enemy> &vEnemyHP, 
-        sf::Sprite followEnemyShape, Enemy e1);
-    void SpawnEnemyElite(int numEnemies, sf::RenderWindow &window, 
-            vector<sf::Sprite> &vEnemyTexture, vector<Enemy> &vEnemyHP, 
-            sf::Sprite elite01shape,Enemy elite01);
-    void SpawnEliteBullets(sf::Vector2f  enemyPos,Bullet elite01bullet,std::vector<Bullet> &vBullet);
-    void SpawnEnemyEliteMissile(int numEnemies, sf::RenderWindow &window, 
-        vector<sf::Sprite> &vEnemyTexture, vector<Enemy> &vEnemyHP, 
-        sf::Sprite elite02shape,Enemy elite02);       
-    void SpawnMissile( sf::Vector2f  enemyPos, 
-        vector<sf::Sprite> &vEnemyTexture, vector<Enemy> &vEnemyHP, 
-        sf::Sprite missileShape, Enemy e3);
+
  //***************************************************************************************** 
     while (window.isOpen())
         {
@@ -490,8 +365,6 @@ if(sf::Mouse::isButtonPressed(sf::Mouse::Button::Left) && shootTimer >=20)
     shootTimer = 0;
 }
 
-
-        
         //clear
         window.clear(sf::Color(124,124,124));
         
@@ -510,6 +383,10 @@ if(sf::Mouse::isButtonPressed(sf::Mouse::Button::Left) && shootTimer >=20)
         else Rand = rand()%4;
         int pattern = rand()%3+1;
         int spawnCount = 0;
+        if(wave %10 == 0 && superelitespawn){
+            SpawnSuperEnemyElite(window, vEnemyTexture,vEnemyHP, superEliteshape,superelite);
+            superelitespawn = false;
+        }
         if(Rand == 1){
             SpawnEnemyPattern(pattern, 10, window, vEnemyTexture, vEnemyHP, enemyShape, e0);
             spawnCount += 10;
@@ -532,6 +409,7 @@ if(sf::Mouse::isButtonPressed(sf::Mouse::Button::Left) && shootTimer >=20)
 
         if (vEnemyTexture.size() == 0 && enemiesSpawned >= enemiesToSpawn* currentPatterns && enemySpawnTimer >= framerate*2) {
             wave++;
+            if(wave% 10 == 0)superelitespawn =true;
             currentPatterns++;
             enemiesSpawned = 0;
             if(e0.speed <= e0.speedmax) e0.speed += 0.25;
@@ -557,7 +435,10 @@ if(sf::Mouse::isButtonPressed(sf::Mouse::Button::Left) && shootTimer >=20)
             elite02.HPmax += 1;
             elite02.HP = elite02.HPmax;
         }
-
+        if(wave > 10){
+            superelite.HPmax +=  10;
+            superelite.HP = superelite.HPmax;
+        }
         }
         
             //Enemy
@@ -568,7 +449,8 @@ if(sf::Mouse::isButtonPressed(sf::Mouse::Button::Left) && shootTimer >=20)
             if(vEnemyHP[i].type == 1 or vEnemyHP[i].type == 3){followEnemyPOS = (vEnemyTexture[i].getPosition());}
             playerCenter = {playerShape.getPosition().x + playerShape.getGlobalBounds().size.x/2 , playerShape.getPosition().y + playerShape.getGlobalBounds().size.y/2};
             enemyAimDir = (playerCenter-followEnemyPOS);
-            enemyAimDirNorm =  enemyAimDir / (float)sqrt(pow(enemyAimDir.x,2)+pow(enemyAimDir.y,2));
+            if(enemyAimDir.x != 0.f and enemyAimDir.y != 0.f) enemyAimDirNorm =  enemyAimDir / (float)sqrt(pow(enemyAimDir.x,2)+pow(enemyAimDir.y,2));
+            else enemyAimDirNorm = {0.f,0.f};
             
             //draw+move
             window.draw(vEnemyTexture[i]);//draw
@@ -577,6 +459,12 @@ if(sf::Mouse::isButtonPressed(sf::Mouse::Button::Left) && shootTimer >=20)
             if(vEnemyHP[i].type == 2)vEnemyTexture[i].move({0.f,0.5f*vEnemyHP[i].speed});
             if(vEnemyHP[i].type == 3)vEnemyTexture[i].move(enemyAimDirNorm*vEnemyHP[i].speed);
             if(vEnemyHP[i].type == 4)vEnemyTexture[i].move({0.f,0.5f*vEnemyHP[i].speed});
+            if(vEnemyHP[i].type == 5){
+                if ( vEnemyTexture[i].getPosition().x >= 800) {
+                    direction = -1;
+                }else if(vEnemyTexture[i].getPosition().x <= 100)direction = 1;
+                vEnemyTexture[i].move({direction*1.f, 0.f});
+            }
 
             //enemy shoot
             if(vEnemyHP[i].type == 0 && vEnemyHP[i].shootTimer < 50) vEnemyHP[i].shootTimer++;
@@ -589,17 +477,38 @@ if(sf::Mouse::isButtonPressed(sf::Mouse::Button::Left) && shootTimer >=20)
         }
             if(vEnemyHP[i].type == 2&& vEnemyHP[i].shootTimer < 100) vEnemyHP[i].shootTimer++;
             if(vEnemyHP[i].type == 2 && vEnemyHP[i].shootTimer >= 100){
-                SpawnEliteBullets(vEnemyTexture[i].getPosition(),elite01bullet,vBullet);
+                SpawnEliteBullets(vEnemyTexture[i].getPosition(),elite01bullet,vBullet,1);
                 vEnemyHP[i].shootTimer = 0;
             }
-            if(vEnemyHP[i].type == 4 && vEnemyHP[i].shootTimer <= 50) vEnemyHP[i].shootTimer++;
-            if(vEnemyHP[i].type == 4 && vEnemyHP[i].shootTimer >= 50){
-                SpawnMissile(vEnemyTexture[i].getPosition(), vEnemyTexture,vEnemyHP,missileShape,missile);
+            if(vEnemyHP[i].type == 4 && vEnemyHP[i].shootTimer <= 100) vEnemyHP[i].shootTimer++;
+            if(vEnemyHP[i].type == 4 && vEnemyHP[i].shootTimer >= 100){
+                SpawnMissile(vEnemyTexture[i].getPosition(), vEnemyTexture,vEnemyHP,missileShape,missile,1);
                 vEnemyHP[i].shootTimer = 0;
+            }
+            if(vEnemyHP[i].type == 5 && vEnemyHP[i].shootTimer <= 50) vEnemyHP[i].shootTimer++;
+            if(vEnemyHP[i].type == 5 ){
+                if (vEnemyHP[i].shootTimer >= 50){
+                    int Rand = rand()%100;
+                    if(Rand <10) {
+                        pull = true;
+                    }
+                    if(Rand > 60) SpawnMissile(vEnemyTexture[i].getPosition(), vEnemyTexture,vEnemyHP,missileShape,missile,2);
+                    SpawnEliteBullets(vEnemyTexture[i].getPosition(),elite01bullet,vBullet,2);
+                    vEnemyHP[i].shootTimer = 0;
+                }if(pull && pullcd <= 0) {
+                    playerShape.move(0.01f*(vEnemyTexture[i].getPosition()-playerShape.getPosition()));
+                    
+                }
+                if(pulltime > 0 && pull ) pulltime--;
+                if(pullcd > 0) pullcd--;
+                if(pulltime <= 0) {
+                    pulltime = 300;
+                    pull = false;
+                }
             }
             
             //collision to player
-            if(vEnemyTexture[i].getGlobalBounds().findIntersection(playerShape.getGlobalBounds()) and playerHitCD <= 0) {
+            if(vEnemyTexture[i].getGlobalBounds().findIntersection(playerShape.getGlobalBounds()) and playerHitCD <= 0 and vEnemyHP[i].type != 5) {
                 if(shield){
                     vEffect.push_back(effect);
                     vEffect.back().pos={vEnemyTexture[i].getPosition()};
@@ -640,15 +549,12 @@ if(sf::Mouse::isButtonPressed(sf::Mouse::Button::Left) && shootTimer >=20)
                 vBullet.erase(vBullet.begin() + i);
                 break;
             }
-              
                 //enemy collision when got bullet
             for (int k = vEnemyTexture.size() - 1; k >= 0; k--) 
             {
                 if((vBullet[i].type == 'P' || vBullet[i].type == 'U' )&& vBullet[i].bulletSprite.getGlobalBounds().findIntersection(vEnemyTexture[k].getGlobalBounds()))
                 {
-                    
                     vEnemyHP[k].HP -= player.Pdmg;//dmg
-                    
                     if (vEnemyHP[k].HP <= 0) {
                         if(powerupCD <= 0){
                             int dropChance = rand()%2;
@@ -802,9 +708,9 @@ if(sf::Mouse::isButtonPressed(sf::Mouse::Button::Left) && shootTimer >=20)
             } //Pause
         } //Player
 
-        cout<<"wave : "<< wave <<'\n';
-        // if (player.HP<=0){cout<<"Player die"; }
-        cout << "time = " << shieldtimer << endl;
+        // cout<<"wave : "<< wave <<'\n';
+        // // if (player.HP<=0){cout<<"Player die"; }
+        // cout << "time = " << shieldtimer << endl;
 
         //Pause
         if (sf::Mouse::isButtonPressed(sf::Mouse::Button::Left)) {
@@ -839,6 +745,8 @@ if(sf::Mouse::isButtonPressed(sf::Mouse::Button::Left) && shootTimer >=20)
                     missile.HP = 1;
                     missile.HP = missile.HPmax;
                     missile.speed = 3;
+                    superelite.HPmax = 200;
+                    superelite.HP = superelite.HPmax;
                     e0.speed = 1;
                     e1.speed = 3;
                     ultimate = false;
@@ -872,13 +780,32 @@ if(sf::Mouse::isButtonPressed(sf::Mouse::Button::Left) && shootTimer >=20)
             restartGame = false;
             if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::R)) //Restart Game
             {
+                restartGame = true;
+                pause = false;
+                vEnemyTexture.clear(); vEnemyHP.clear(); vBullet.clear();  
                 bulletDirections.clear();
-                vEnemyTexture.clear(); vEnemyHP.clear(); vBullet.clear(); 
                 ultimateTime = 0;
+                e0.HPmax = 3;
+                e0.HP = e0.HPmax;
+                e1.HPmax = 1;
+                e1.HP = e1.HPmax;
+                elite01.HPmax = 20;
+                elite01.HP = elite01.HPmax;
+                elite02.HPmax = 30;
+                elite02.HP = elite01.HPmax;
+                missile.HP = 1;
+                missile.HP = missile.HPmax;
+                missile.speed = 3;
+                superelite.HPmax = 200;
+                superelite.HP = superelite.HPmax;
+                e0.speed = 1;
+                e1.speed = 3;
                 ultimate = false;
                 getfirst = false;
                 enemiesToSpawn = 0; 
                 enemiesSpawned = 0;
+                enemySpawnTimer = 0;
+                checkpow = 0;
                 wave = 0;
                 powerup = 0;
                 playerShape.setPosition({370,700});
@@ -897,101 +824,7 @@ if(sf::Mouse::isButtonPressed(sf::Mouse::Button::Left) && shootTimer >=20)
                 vEffect[i].effectChange(showEffect,effSound1,vEffect.back().pos,window,pause);
                 if(vEffect[i].state>=8) {vEffect.erase(vEffect.begin()+i); i--; break;}
             }
-
         window.display();
-       
         }
-
     return 0;//code แม่งโคตร KEYES
-
 }
-void SpawnEnemyPattern(int pattern, int numEnemies, sf::RenderWindow &window, 
-    vector<sf::Sprite> &vEnemyTexture, vector<Enemy> &vEnemyHP, 
-    sf::Sprite enemyShape, Enemy e0){
-    float startX = window.getSize().x / 2 + 30; 
-    float startY = 0; 
-    float spacing = 100; 
-
-    for (int i = 0; i < numEnemies; i++) {
-        vEnemyTexture.push_back(enemyShape);
-        vEnemyHP.push_back(e0);
-        if (pattern == 1) { // **Line Pattern**
-            vEnemyTexture.back().setPosition({startX - (numEnemies * spacing / 2) + i * spacing, startY});
-        } else if (pattern == 2) { // **V-Shape Pattern**
-            float offsetX = (i - numEnemies / 2) * spacing; 
-            float offsetY = abs(i - numEnemies / 2) * 20; 
-            vEnemyTexture.back().setPosition({startX + offsetX, startY + offsetY});
-        } else if (pattern == 3) { // **Circle Pattern**
-            float angle = i * (360.0 / numEnemies) * (M_PI / 180.0); 
-            float radius = 250; 
-            vEnemyTexture.back().setPosition({startX + cos(angle) * radius, -200 + sin(angle) * radius});
-        }
-    }
-}
-void SpawnEnemyfollow(int numEnemies, sf::RenderWindow &window, 
-        vector<sf::Sprite> &vEnemyTexture, vector<Enemy> &vEnemyHP, 
-        sf::Sprite followEnemyShape, Enemy e1)
-        {
-            for(int j =0;j<10;j++){
-                float startX = rand()%window.getSize().x;
-                float startY = rand()%10; 
-                vEnemyTexture.push_back(followEnemyShape);
-                vEnemyHP.push_back(e1);
-                vEnemyTexture.back().setPosition({startX,startY});
-            }
-        }
-void SpawnEnemyElite(int numEnemies, sf::RenderWindow &window, 
-            vector<sf::Sprite> &vEnemyTexture, vector<Enemy> &vEnemyHP, 
-            sf::Sprite elite01shape,Enemy elite01)
-            {
-                for (int i = 0; i < numEnemies; i++) {
-                float startX = window.getSize().x/2+100;
-                float startY = 150; 
-                float spacing = 150;
-                vEnemyTexture.push_back(elite01shape);
-                vEnemyHP.push_back(elite01);
-                vEnemyTexture.back().setPosition({startX - (numEnemies * spacing / 2) + i * spacing, startY});
-                }
-            }
-void SpawnEliteBullets(sf::Vector2f enemyPos,Bullet elite01bullet,std::vector<Bullet> &vBullet)
-{
-    const int numBullets = 5; // จำนวนกระสุน
-    const float spreadAngle = 180.f; // กระจายครึ่งวงกลม (180 องศา)
-    float startAngle = 0; // เริ่มยิงจาก -180 องศาไป 0 องศา
-
-    for (int j = 0; j < numBullets; j++)
-    {
-        float angle = startAngle + (j * spreadAngle / (numBullets - 1)); // คำนวณมุมของกระสุนแต่ละอัน
-        float radian = angle * (M_PI / 180.f); // แปลงเป็นเรเดียน
-        
-        vBullet.push_back(elite01bullet);
-        vBullet.back().bulletSprite.setPosition(enemyPos); // ตั้งกระสุนให้ออกจากตำแหน่งศัตรูa
-
-        sf::Vector2f direction({cos(radian), sin(radian)});
-        vBullet.back().bulletDirection = direction;
-    }
-}
-void SpawnEnemyEliteMissile(int numEnemies, sf::RenderWindow &window, 
-    vector<sf::Sprite> &vEnemyTexture, vector<Enemy> &vEnemyHP, 
-    sf::Sprite elite02shape,Enemy elite02)
-    {
-        for (int i = 0; i < numEnemies; i++) {
-            float startX = window.getSize().x/2;
-            float startY = 150; 
-            float spacing = 300;
-            float offsetX = (i - numEnemies / 2) * spacing; 
-            float offsetY = abs(i - numEnemies / 2) * 20; 
-            vEnemyTexture.push_back(elite02shape);
-            vEnemyHP.push_back(elite02);
-            vEnemyTexture.back().setPosition({startX + offsetX, startY + offsetY});
-    }
-}
-void SpawnMissile( sf::Vector2f  enemyPos, 
-    vector<sf::Sprite> &vEnemyTexture, vector<Enemy> &vEnemyHP, 
-    sf::Sprite missileShape, Enemy missile)
-    {
-            vEnemyTexture.push_back(missileShape);
-            vEnemyHP.push_back(missile);
-            vEnemyTexture.back().setPosition({enemyPos});
-    }
-
