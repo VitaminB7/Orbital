@@ -53,6 +53,8 @@ public:
         shootTimer = -30;
         speed = 0.5;
         speedmax = 5;
+        isHit = false;
+        hitTimer = 0;
     }
 
     Enemy(int a){
