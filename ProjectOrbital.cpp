@@ -41,6 +41,8 @@ public:
     int shootTimer;
     float speed;
     float speedmax;
+    bool isHit;
+    int hitTimer;
 
 
     Enemy(){
