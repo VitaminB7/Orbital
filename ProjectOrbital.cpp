@@ -3,6 +3,22 @@
 #include "function.h"
 using namespace std;
 
+bool nukeActive = false;
+int nukeTimer = 0;
+
+//instakill//
+bool instakill = false;
+int instakillTimer = 0;
+
+//ability cooldown//
+int nukeCooldown = 0;
+int instakillCooldown = 0;
+int resetCooldown = 0;
+
+//ability duration bar
+sf::RectangleShape instakillDurationBar;
+sf::RectangleShape instakillDurationBarBorder;
+
 int main()
 {   
     srand(time(0));
@@ -11,6 +27,9 @@ int main()
     setting.antiAliasingLevel = 4;
     sf::RenderWindow window(sf::VideoMode({1000,900}),"Orbital", sf::Style::Close , sf::State::Windowed, setting);
     MainMenu mainMenu({800,600});
+    float x = 350;
+    ButtonSlide ButtonSlide1({x, 400, 400});
+    ButtonSlide ButtonSlide2({x, 500, 400});
     window.setFramerateLimit(framerate);
     
     //texture
@@ -24,27 +43,75 @@ int main()
     sf::Texture playerUltimateBulletTexture("SpaceShooterShipConstructor/PNG/Bullets/12.png");
     sf::Texture enemyBulletTexture("SpaceShooterShipConstructor/PNG/Bullets/02.png");
     sf::Texture elite01bulletTexture("SpaceShooterShipConstructor/PNG/Bullets/05.png");
+    sf::Texture missileTexture("SpaceShooterShipConstructor/PNG/Addmore/missile.png");
     sf::Texture upgradeWeapon("SpaceShooterShipConstructor/PNG/Addmore/upgrade_icon.png");
     sf::Texture Heal("SpaceShooterShipConstructor/PNG/Addmore/heal.png");
     sf::Texture ShieldIcon("SpaceShooterShipConstructor/PNG/Addmore/shield_icon.png");
     sf::Texture ShieldActive("SpaceShooterShipConstructor/PNG/Addmore/shield_active.png");
-    sf::Texture missileTexture("SpaceShooterShipConstructor/PNG/Addmore/missile.png");
+    sf::Texture background("Scene/Space Background (2).png");
+    sf::Texture bgMainmenu("Scene/Space Background (1).png");
+    sf::Texture nukeIcon("SpaceShooterShipConstructor/PNG/Addmore/nukeicon.png");
+    sf::Texture instakillIcon("SpaceShooterShipConstructor/PNG/Addmore/instakill.png");
+    sf::Texture resetCooldownIcon("SpaceShooterShipConstructor/PNG/Addmore/resetcooldown.png");
+    sf::Texture nukeExplosion("SpaceShooterShipConstructor/PNG/Addmore/explosion.png");
+
     sf::Texture effectTexture("Effect/effect.png");
+    sf::Texture nukeIcon("SpaceShooterShipConstructor/PNG/Addmore/nukeicon.png");
+    sf::Texture instakillIcon("SpaceShooterShipConstructor/PNG/Addmore/instakill.png");
+    sf::Texture resetCooldownIcon("SpaceShooterShipConstructor/PNG/Addmore/resetcooldown.png");
+    sf::Texture nukeExplosion("SpaceShooterShipConstructor/PNG/Addmore/explosion.png");
     sf::IntRect frame({0,0},{48,48});
     sf::Sprite showEffect(effectTexture,frame);
 
     // sound
     sf::Music theme1("Sound/Theme.mp3");
-    theme1.setVolume(25);
+    //theme1.setVolume(25);
     theme1.setLooping(true);
     theme1.play();
 
     sf::SoundBuffer mExplode("Sound/mExplode.mp3");
     sf::Sound effSound1(mExplode);
-    effSound1.setVolume(60);
+    //effSound1.setVolume(60);
+
+    sf::SoundBuffer nExplosion("Sound/nExplosion.wav");
+    sf::Sound effsound2(nExplosion);
+
+    sf::SoundBuffer instakillSound("Sound/instakill2.wav");
+    sf::Sound effsound3(instakillSound);
+    //effsound3.setVolume(25);
+
+    sf::SoundBuffer reset("Sound/reset.wav");
+    sf::Sound effsound4(reset);
+    //effsound4.setVolume(50);
+
+    sf::SoundBuffer nExplosion("Sound/nExplosion.wav");
+    sf::Sound effsound2(nExplosion);
+
+    sf::SoundBuffer instakillSound("Sound/instakill2.wav");
+    sf::Sound effsound3(instakillSound);
+    effsound3.setVolume(30);
+
+    sf::SoundBuffer reset("Sound/reset.wav");
+    sf::Sound effsound4(reset);
+    effsound4.setVolume(60);
 
     sf::SoundBuffer bBullet("Sound/bullet.wav");
     sf::Sound bulletSound(bBullet);
+
+    // music sound
+    ButtonSlide1.setUpdateFunction([&theme1](float volume) 
+    {
+        theme1.setVolume(volume);
+    });
+
+    // effectSound
+    ButtonSlide2.setUpdateFunction([&](float volume) {
+        effSound1.setVolume(volume);
+        effsound2.setVolume(volume);
+        effsound3.setVolume(volume);
+        effsound4.setVolume(volume);
+        bulletSound.setVolume(volume);
+    });
  
     Effect effect;
     std::vector<Effect> vEffect;
@@ -57,43 +124,88 @@ int main()
     sf::Text restartText(font);
     sf::Text yourScoreText(font);
     sf::Text resumeText(font);
-    sf::Text obritalText(font);
+    sf::Text nukeCooldownText(font);
+    sf::Text instakillCooldownText(font);
+    sf::Text resetCooldownText(font);
     //Obrital
-    obritalText.setString("Obrital");
+    sf::Text obritalText(font);
+    sf::Text shadowText(font);
+    obritalText.setString("Orbital");
     obritalText.setFillColor(sf::Color::Red);
-    obritalText.setCharacterSize(100);
-    obritalText.setPosition(sf::Vector2f(70, 170));
+    obritalText.setCharacterSize(170);
+    obritalText.setPosition(sf::Vector2f(70, 70));
+    shadowText = obritalText;
+    shadowText.setFillColor(sf::Color(0, 0, 0, 150)); 
+    shadowText.move({10, 10});
+    sf::Texture musicText("Prop/Shadow/64/Music-0.png");
+    sf::Sprite music(musicText);
+    music.setOrigin({64/2,64/2});
+    music.setPosition({285, 415});
+    sf::Texture soundText("Prop/Shadow/64/Speaker-0.png");
+    sf::Sprite sound(soundText);
+    sound.setOrigin({64/2,64/2});
+    sound.setPosition({285, 515});
+    sf::Texture backText("Prop/Shadow/64/Back.png");
+    sf::Sprite back(backText);
+    back.setScale({1.5,1.4});
+    back.setPosition({20,20});
+    //Background
+    sf::Sprite backgroundGame(background);
+    sf::Sprite bgMenu(bgMainmenu);
+  
+    //ability cooldown
+    nukeCooldownText.setCharacterSize(25);
+    nukeCooldownText.setFillColor(sf::Color::Black);
+    nukeCooldownText.setPosition(sf::Vector2f(50, 60));
+
+    instakillCooldownText.setCharacterSize(25);
+    instakillCooldownText.setFillColor(sf::Color::Red);
+    instakillCooldownText.setPosition(sf::Vector2f(50, 90));
+
+    resetCooldownText.setCharacterSize(25);
+    resetCooldownText.setFillColor(sf::Color::White);
+    resetCooldownText.setPosition(sf::Vector2f(50, 120));
+    ////duration bars
+    instakillDurationBar.setSize(sf::Vector2f(200, 15));
+    instakillDurationBar.setFillColor(sf::Color::Yellow);
+    instakillDurationBar.setPosition(sf::Vector2f(20, 170));
+    instakillDurationBarBorder.setSize(sf::Vector2f(200, 15));
+    instakillDurationBarBorder.setFillColor(sf::Color::Transparent);
+    instakillDurationBarBorder.setOutlineThickness(2);
+    instakillDurationBarBorder.setOutlineColor(sf::Color::Black);
+    instakillDurationBarBorder.setPosition({20, 170});
     //Pause Game
-    sf::Texture button("Prop/button UI.png");
-    sf::IntRect pause1(sf::Vector2i(16*11, 16*9), sf::Vector2i(16, 16));
-    sf::Sprite Pause(button);
-    Pause.setTextureRect(pause1);
-    Pause.setPosition({721,15});
-    Pause.setScale({4,4});
-    sf::IntRect restart1(sf::Vector2i(16*9, 16*9), sf::Vector2i(16, 16));
-    sf::Sprite restart(button);
-    restart.setTextureRect(restart1);
-    restart.setPosition({380,355});
-    restart.setScale({4,4});
-    sf::IntRect resume1(sf::Vector2i(16*7, 16*9), sf::Vector2i(16, 16));
-    sf::Sprite resume(button);
-    resume.setTextureRect(resume1);
-    resume.setPosition({280,355});
-    resume.setScale({4,4});
-    sf::IntRect exit1(sf::Vector2i(16*10, 16*10), sf::Vector2i(16, 16));
-    sf::Sprite exit(button);
-    exit.setTextureRect(exit1);
-    exit.setPosition({480,355});
-    exit.setScale({4,4});
+    float centerX = 1000/2 - 96/2;
+    float centerY = 900/2 - 96/2;
+    sf::Texture pauseTex("Prop/Shadow/16/Pause.png");
+    sf::Sprite Pause(pauseTex);
+    Pause.setScale({6,6});
+    Pause.setPosition({1000 - 111,15});
+    sf::Texture resumeTexture("Prop/Shadow/16/Play.png");
+    sf::Sprite resume(resumeTexture);
+    resume.setPosition({centerX - 96 - 10, centerY - 96 - 10});
+    resume.setScale({6,6});
+    sf::Texture restartTexture("Prop/Shadow/16/Redo.png");
+    sf::Sprite restart(restartTexture);
+    restart.setPosition({centerX + 96 + 10, centerY - 96 - 10});
+    restart.setScale({6,6});
+    sf::Texture exitTexture("Prop/Shadow/16/Exit.png");
+    sf::Sprite exit(exitTexture);
+    exit.setPosition({centerX - 96 - 10, centerY + 96 + 10});
+    exit.setScale({6,6});
+    sf::Texture homeText("Prop/Shadow/16/Home.png");
+    sf::Sprite home(homeText);
+    home.setPosition({centerX + 96 + 10, centerY + 96 + 10});
+    home.setScale({6,6});
     //Text GameOver
     std::stringstream got,rt;
     got << " Game Over ";
     gameOverText.setString(got.str());
     gameOverText.setFillColor(sf::Color::Red);
     gameOverText.setCharacterSize(100);
-    gameOverText.setPosition({400,300});
+    gameOverText.setPosition({500,300});
     gameOverText.setOrigin({gameOverText.getGlobalBounds().size.x / 2, gameOverText.getGlobalBounds().size.y / 2});
-    sf::RectangleShape gameOverBg({800,800});
+    sf::RectangleShape gameOverBg({1000,900});
     gameOverBg.setFillColor(sf::Color(0, 0, 0, 130));
     //Blink String
     sf::Clock clock;
@@ -104,13 +216,8 @@ int main()
     restartText.setString(rt.str());
     restartText.setFillColor(sf::Color::White);
     restartText.setCharacterSize(40);
-    restartText.setPosition({400,480});
+    restartText.setPosition({500,480});
     restartText.setOrigin({restartText.getGlobalBounds().size.x / 2, restartText.getGlobalBounds().size.y / 2});
-    //Close Game
-    sf::Texture homeGame("Prop/home.png");
-    sf::Sprite home(homeGame);
-    home.setPosition({721,15});
-    home.setScale({4,4});
 
 //******************************************************************************************************************************************* */
     
@@ -189,7 +296,24 @@ int main()
     std::vector<Bullet> vBullet;
     std::vector<sf::Vector2f> bulletDirections;
     
+    //ability icon
+    sf::Sprite nukeIconSprite(nukeIcon);
+    nukeIconSprite.setPosition(sf::Vector2f(12.5, 60));
+    nukeIconSprite.setScale({0.15f,0.15f});
 
+    sf::Sprite instakillIconSprite(instakillIcon);
+    instakillIconSprite.setPosition(sf::Vector2f(-7, 70));
+    instakillIconSprite.setScale({0.2f,0.2f});
+    
+    sf::Sprite resetCooldownIconSprite(resetCooldownIcon);
+    resetCooldownIconSprite.setPosition(sf::Vector2f(15, 122));
+    resetCooldownIconSprite.setScale({0.08f,0.08f});
+
+    sf::Sprite nukeEffectSprite(nukeExplosion);
+    nukeEffectSprite.setPosition({-50,-300});
+    nukeEffectSprite.setScale({3,3});
+    nukeEffectSprite.setColor(sf::Color(255, 255, 255, 150));
+    
     //Split 
     bool pause = false;
     bool play = false;
@@ -197,6 +321,8 @@ int main()
     bool wasClickedPlay = false;
     bool ismainMenu = true;
     bool restartGame = false;
+    bool homeGame = false;
+    bool resetGame = false;
     //general factor
     int shootTimer = 100;
     int RandUpgrade = 0;
@@ -256,16 +382,60 @@ int main()
                     std::cout << "Play"; play = true; ismainMenu = false;  
                 }   
                 if (x == 1) 
-                    std::cout << "Option";
+                {
+                    ismainMenu = false;
+                }
                 if (x == 2) 
                 {
                     std::cout << "Exit"; window.close();
                 }      
             } 
                 //window.clear();
+                window.draw(bgMenu);
                 mainMenu.draw(window);
+                window.draw(shadowText);
                 window.draw(obritalText);
                 //window.display();
+            }
+            if (!ismainMenu && !play) { //หน้าsetting
+                window.draw(bgMenu); window.draw(gameOverBg); window.draw(sound); window.draw(music); window.draw(back);
+                ButtonSlide1.draw(window);
+                ButtonSlide2.draw(window);
+                ButtonSlide1.handle(window);
+                ButtonSlide2.handle(window);
+                if (sf::Mouse::isButtonPressed(sf::Mouse::Button::Left)) {
+                    sf::Vector2f mousePos = sf::Vector2f(sf::Mouse::getPosition(window));
+                    if (back.getGlobalBounds().contains(mousePos)) {
+                        ismainMenu = true;
+                    }
+                } 
+                
+            } 
+
+            //resetGame
+            if(resetGame){
+                restartGame = true;
+                pause = false;
+                vEnemyTexture.clear(); vEnemyHP.clear(); vBullet.clear(); bulletDirections.clear();
+                ultimateTime = 0;
+                e0.HPmax = 3; e0.HP = e0.HPmax;
+                e1.HPmax = 1; e1.HP = e1.HPmax;
+                elite01.HPmax = 20; elite01.HP = elite01.HPmax;
+                elite02.HPmax = 30; elite02.HP = elite01.HPmax;
+                missile.HP = 1; missile.HP = missile.HPmax;
+                missile.speed = 3; e0.speed = 1; e1.speed = 3;
+                ultimate = false;
+                getfirst = false;
+                enemiesToSpawn = 0; enemiesSpawned = 0; enemySpawnTimer = 0;
+                checkpow = 0;
+                wave = 0;
+                powerup = 0;
+                nukeCooldown = 0; nukeActive = false;
+                instakillCooldown = 0; instakill = false;
+                resetCooldown = 0; 
+                playerShape.setPosition({500,850});
+                player.score = 0;
+                player.HP = player.HPmax;
             }
             //Blink String
             if (blink) 
@@ -286,7 +456,7 @@ int main()
         yourScoreText.setString(yst.str());
         yourScoreText.setFillColor(sf::Color::Blue);
         yourScoreText.setCharacterSize(60);
-        yourScoreText.setPosition({400,400});
+        yourScoreText.setPosition({500,400});
         yourScoreText.setOrigin({yourScoreText.getGlobalBounds().size.x / 2, yourScoreText.getGlobalBounds().size.y / 2});
 
         //update
@@ -309,6 +479,62 @@ if (play) {
         //player cd
         if(shootTimer < 20) shootTimer++;
         if(playerHitCD  > 0) playerHitCD--;
+
+        //abilities//
+        //nuke//
+        if(nukeCooldown <= 0 && sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Num1)){
+        nuke(vEnemyTexture, vEnemyHP, enemybulletEtlite, enemybulletDirections, vBullet);
+        nukeCooldown = 120 * 30;
+        nukeActive = true;
+        nukeTimer = 120 * 5;
+        effsound2.play();
+        }
+        //instakill//
+        if (instakillCooldown <= 0 && sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Num2)) {
+            instakill = true;
+            instakillTimer = 120 * 10;
+            instakillCooldown = 120 * 20;
+            effsound3.play();
+        }
+        if (instakillTimer > 0)
+        instakillTimer--;
+        else instakill = false;
+        //reset cooldown//
+        if (resetCooldown <= 0 && sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Num3)) {
+            nukeCooldown = 0;
+            instakillCooldown = 0;
+            resetCooldown = 120 * 60;
+            effsound4.play();
+        }
+
+        //nuke timer//
+        if (nukeTimer > 0) {
+            nukeTimer--;
+        } else {
+            nukeActive = false;
+        }
+
+        //ability cooldown//
+        if (nukeCooldown > 0) {
+            nukeCooldown--;
+        }
+        if (instakillCooldown > 0) {
+            instakillCooldown--;
+        }
+        if (resetCooldown > 0) {
+            resetCooldown--;
+        }
+
+        //Update ability text
+        nukeCooldownText.setString("Nuke Cooldown: " + std::to_string(nukeCooldown / 120) + "s");
+        instakillCooldownText.setString("Instakill Cooldown: " + std::to_string(instakillCooldown / 120) + "s");
+        resetCooldownText.setString("Reset Cooldown: " + std::to_string(resetCooldown / 120) + "s");
+
+        if (instakill) {
+            instakillDurationBar.setSize(sf::Vector2f((instakillTimer / float(120 * 10)) * 200, 15));
+        } else {
+            instakillDurationBar.setSize(sf::Vector2f(0, 20));
+        }
 
         //player shoot
 
@@ -366,12 +592,23 @@ if(sf::Mouse::isButtonPressed(sf::Mouse::Button::Left) && shootTimer >=20)
 }
 
         //clear
-        window.clear(sf::Color(124,124,124));
-        
         //draw
+        window.draw(backgroundGame);
         window.draw(Pause); 
         window.draw(scoreText);
         window.draw(playerShape);
+        // Draw cooldown text
+        window.draw(nukeCooldownText);
+        window.draw(instakillCooldownText);
+        window.draw(resetCooldownText);
+        //draw ability icon
+        window.draw(nukeIconSprite);
+        window.draw(instakillIconSprite);
+        window.draw(resetCooldownIconSprite);
+        if(nukeActive)
+        window.draw(nukeEffectSprite);
+        window.draw(instakillDurationBar);
+        window.draw(instakillDurationBarBorder);    
 
         //EnemySpawn 
         if (enemySpawnTimer < framerate *2) enemySpawnTimer++;
@@ -537,6 +774,16 @@ if(sf::Mouse::isButtonPressed(sf::Mouse::Button::Left) && shootTimer >=20)
                 break;
             } //out(bottom)
 
+            // enemy is hit 
+            if (vEnemyHP[i].isHit) {
+                vEnemyTexture[i].setColor(sf::Color(255, 90, 90));
+                vEnemyHP[i].hitTimer--;
+                if (vEnemyHP[i].hitTimer <= 0) {
+                    vEnemyHP[i].isHit = false;
+                    vEnemyTexture[i].setColor(sf::Color::White);
+                }
+            }
+
         }
         
             //Bullet
@@ -554,7 +801,12 @@ if(sf::Mouse::isButtonPressed(sf::Mouse::Button::Left) && shootTimer >=20)
             {
                 if((vBullet[i].type == 'P' || vBullet[i].type == 'U' )&& vBullet[i].bulletSprite.getGlobalBounds().findIntersection(vEnemyTexture[k].getGlobalBounds()))
                 {
-                    vEnemyHP[k].HP -= player.Pdmg;//dmg
+                    if(instakill && vEnemyHP[k].type != 5){vEnemyHP[k].HP = 0;}
+                    else vEnemyHP[k].HP -= player.Pdmg;//dmg
+
+                    vEnemyHP[k].isHit = true;
+                    vEnemyHP[k].hitTimer = 15;
+                    
                     if (vEnemyHP[k].HP <= 0) {
                         if(powerupCD <= 0){
                             int dropChance = rand()%2;
@@ -721,103 +973,51 @@ if(sf::Mouse::isButtonPressed(sf::Mouse::Button::Left) && shootTimer >=20)
                 
             }    
             if (pause) {
-                window.clear(sf::Color(124,124,124));
+                window.draw(backgroundGame);
+                window.draw(gameOverBg);
                 window.draw(resume);
                 window.draw(restart);
                 window.draw(exit);
+                window.draw(home);
                 if (resume.getGlobalBounds().contains(mousePos)) pause = !pause;  
-                if (restart.getGlobalBounds().contains(mousePos)) 
-                {
-                    cout << "restart was clicked";
-                    restartGame = true;
-                    pause = false;
-                    vEnemyTexture.clear(); vEnemyHP.clear(); vBullet.clear();  
-                    bulletDirections.clear();
-                    ultimateTime = 0;
-                    e0.HPmax = 3;
-                    e0.HP = e0.HPmax;
-                    e1.HPmax = 1;
-                    e1.HP = e1.HPmax;
-                    elite01.HPmax = 20;
-                    elite01.HP = elite01.HPmax;
-                    elite02.HPmax = 30;
-                    elite02.HP = elite01.HPmax;
-                    missile.HP = 1;
-                    missile.HP = missile.HPmax;
-                    missile.speed = 3;
-                    superelite.HPmax = 200;
-                    superelite.HP = superelite.HPmax;
-                    e0.speed = 1;
-                    e1.speed = 3;
-                    ultimate = false;
-                    getfirst = false;
-                    enemiesToSpawn = 0; 
-                    enemiesSpawned = 0;
-                    enemySpawnTimer = 0;
-                    checkpow = 0;
-                    wave = 0;
-                    powerup = 0;
-                    playerShape.setPosition({370,700});
-                    player.score = 0;
-                    player.HP = player.HPmax;
-                }  
+                if (restart.getGlobalBounds().contains(mousePos)) resetGame = true;
+                if (sf::Mouse::isButtonPressed(sf::Mouse::Button::Left)) 
+            {
+                sf::Vector2f mousePos = sf::Vector2f(sf::Mouse::getPosition(window)); 
+                if (home.getGlobalBounds().contains(mousePos)) {
+                    play = false;
+                    resetGame = true;
+                    ismainMenu = true;
+                }
+            }
                 if (exit.getGlobalBounds().contains(mousePos)) window.close();
             }
         } else {
-            wasClickedPause = false; 
+            wasClickedPause = false; resetGame = false;
         }
             
-        if (player.HP <= 0 || restartGame) //Game Over
+        if (player.HP <= 0) //Game Over
         {   
-            if (player.HP <= 0) {
-            window.clear(sf::Color(124,124,124));
+            window.draw(backgroundGame);
             window.draw(gameOverBg);
             window.draw(gameOverText);
             window.draw(restartText);
             window.draw(yourScoreText);
-            window.draw(home);
-            }
-            restartGame = false;
+            window.draw(back);
             if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::R)) //Restart Game
-            {
-                restartGame = true;
-                pause = false;
-                vEnemyTexture.clear(); vEnemyHP.clear(); vBullet.clear();  
-                bulletDirections.clear();
-                ultimateTime = 0;
-                e0.HPmax = 3;
-                e0.HP = e0.HPmax;
-                e1.HPmax = 1;
-                e1.HP = e1.HPmax;
-                elite01.HPmax = 20;
-                elite01.HP = elite01.HPmax;
-                elite02.HPmax = 30;
-                elite02.HP = elite01.HPmax;
-                missile.HP = 1;
-                missile.HP = missile.HPmax;
-                missile.speed = 3;
-                superelite.HPmax = 200;
-                superelite.HP = superelite.HPmax;
-                e0.speed = 1;
-                e1.speed = 3;
-                ultimate = false;
-                getfirst = false;
-                enemiesToSpawn = 0; 
-                enemiesSpawned = 0;
-                enemySpawnTimer = 0;
-                checkpow = 0;
-                wave = 0;
-                powerup = 0;
-                playerShape.setPosition({370,700});
-                player.score = 0;
-                player.HP = player.HPmax;
-            }
-            if (sf::Mouse::isButtonPressed(sf::Mouse::Button::Left)) //Close Game
+            { 
+                resetGame = true; 
+            } 
+            if (sf::Mouse::isButtonPressed(sf::Mouse::Button::Left)) //Back to mainmenu
             {
                 sf::Vector2f mousePos = sf::Vector2f(sf::Mouse::getPosition(window)); 
-                if (home.getGlobalBounds().contains(mousePos)) ismainMenu = true;
+                if (back.getGlobalBounds().contains(mousePos)) {
+                    ismainMenu = true;
+                    play = false;
+                    resetGame = true;
+                }
             }
-        } 
+        }  
 
         for (int i = 0; i < vEffect.size(); i++)
             {
