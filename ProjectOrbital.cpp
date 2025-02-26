@@ -42,6 +42,8 @@ public:
     int shootTimer;
     float speed;
     float speedmax;
+    bool isHit;
+    int hitTimer;
 
 
      Enemy(){
@@ -199,6 +201,10 @@ int main()
     sf::Texture nukeExplosion("SpaceShooterShipConstructor/PNG/Addmore/explosion.png");
 
     sf::Texture effectTexture("Effect/effect.png");
+    sf::Texture nukeIcon("SpaceShooterShipConstructor/PNG/Addmore/nukeicon.png");
+    sf::Texture instakillIcon("SpaceShooterShipConstructor/PNG/Addmore/instakill.png");
+    sf::Texture resetCooldownIcon("SpaceShooterShipConstructor/PNG/Addmore/resetcooldown.png");
+    sf::Texture nukeExplosion("SpaceShooterShipConstructor/PNG/Addmore/explosion.png");
     sf::IntRect frame({0,0},{48,48});
     sf::Sprite showEffect(effectTexture,frame);
 
@@ -222,6 +228,17 @@ int main()
     sf::SoundBuffer reset("Sound/reset.wav");
     sf::Sound effsound4(reset);
     //effsound4.setVolume(50);
+
+    sf::SoundBuffer nExplosion("Sound/nExplosion.wav");
+    sf::Sound effsound2(nExplosion);
+
+    sf::SoundBuffer instakillSound("Sound/instakill2.wav");
+    sf::Sound effsound3(instakillSound);
+    effsound3.setVolume(30);
+
+    sf::SoundBuffer reset("Sound/reset.wav");
+    sf::Sound effsound4(reset);
+    effsound4.setVolume(60);
 
     sf::SoundBuffer bBullet("Sound/bullet.wav");
     sf::Sound bulletSound(bBullet);
@@ -280,6 +297,7 @@ int main()
     //Background
     sf::Sprite backgroundGame(background);
     sf::Sprite bgMenu(bgMainmenu);
+  
     //ability cooldown
     nukeCooldownText.setCharacterSize(25);
     nukeCooldownText.setFillColor(sf::Color::Black);
@@ -433,8 +451,8 @@ int main()
     sf::Sprite nukeEffectSprite(nukeExplosion);
     nukeEffectSprite.setPosition({-50,-300});
     nukeEffectSprite.setScale({3,3});
-    nukeEffectSprite.setColor(sf::Color(255, 255, 255, 120));
-
+    nukeEffectSprite.setColor(sf::Color(255, 255, 255, 150));
+    
     //Split 
     bool pause = false;
     bool play = false;
@@ -614,58 +632,58 @@ if (play) {
         //abilities//
         //nuke//
         if(nukeCooldown <= 0 && sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Num1)){
-            nuke(vEnemyTexture, vEnemyHP, enemybulletEtlite, enemybulletDirections, vBullet);
-            nukeCooldown = 120 * 30;
-            nukeActive = true;
-            nukeTimer = 120 * 5;
-            effsound2.play();
-            }
-            //instakill//
-            if (instakillCooldown <= 0 && sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Num2)) {
-                instakill = true;
-                instakillTimer = 120 * 10;
-                instakillCooldown = 120 * 20;
-                effsound3.play();
-            }
-            if (instakillTimer > 0)
-            instakillTimer--;
-            else instakill = false;
-            //reset cooldown//
-            if (resetCooldown <= 0 && sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Num3)) {
-                nukeCooldown = 0;
-                instakillCooldown = 0;
-                resetCooldown = 120 * 60;
-                effsound4.play();
-            }
-    
-            //nuke timer//
-            if (nukeTimer > 0) {
-                nukeTimer--;
-            } else {
-                nukeActive = false;
-            }
-    
-            //ability cooldown//
-            if (nukeCooldown > 0) {
-                nukeCooldown--;
-            }
-            if (instakillCooldown > 0) {
-                instakillCooldown--;
-            }
-            if (resetCooldown > 0) {
-                resetCooldown--;
-            }
-    
-            //Update ability text
-            nukeCooldownText.setString("Nuke Cooldown: " + std::to_string(nukeCooldown / 120) + "s");
-            instakillCooldownText.setString("Instakill Cooldown: " + std::to_string(instakillCooldown / 120) + "s");
-            resetCooldownText.setString("Reset Cooldown: " + std::to_string(resetCooldown / 120) + "s");
-    
-            if (instakill) {
-                instakillDurationBar.setSize(sf::Vector2f((instakillTimer / float(120 * 10)) * 200, 15));
-            } else {
-                instakillDurationBar.setSize(sf::Vector2f(0, 20));
-            }
+        nuke(vEnemyTexture, vEnemyHP, enemybulletEtlite, enemybulletDirections, vBullet);
+        nukeCooldown = 120 * 30;
+        nukeActive = true;
+        nukeTimer = 120 * 5;
+        effsound2.play();
+        }
+        //instakill//
+        if (instakillCooldown <= 0 && sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Num2)) {
+            instakill = true;
+            instakillTimer = 120 * 10;
+            instakillCooldown = 120 * 20;
+            effsound3.play();
+        }
+        if (instakillTimer > 0)
+        instakillTimer--;
+        else instakill = false;
+        //reset cooldown//
+        if (resetCooldown <= 0 && sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Num3)) {
+            nukeCooldown = 0;
+            instakillCooldown = 0;
+            resetCooldown = 120 * 60;
+            effsound4.play();
+        }
+
+        //nuke timer//
+        if (nukeTimer > 0) {
+            nukeTimer--;
+        } else {
+            nukeActive = false;
+        }
+
+        //ability cooldown//
+        if (nukeCooldown > 0) {
+            nukeCooldown--;
+        }
+        if (instakillCooldown > 0) {
+            instakillCooldown--;
+        }
+        if (resetCooldown > 0) {
+            resetCooldown--;
+        }
+
+        //Update ability text
+        nukeCooldownText.setString("Nuke Cooldown: " + std::to_string(nukeCooldown / 120) + "s");
+        instakillCooldownText.setString("Instakill Cooldown: " + std::to_string(instakillCooldown / 120) + "s");
+        resetCooldownText.setString("Reset Cooldown: " + std::to_string(resetCooldown / 120) + "s");
+
+        if (instakill) {
+            instakillDurationBar.setSize(sf::Vector2f((instakillTimer / float(120 * 10)) * 200, 15));
+        } else {
+            instakillDurationBar.setSize(sf::Vector2f(0, 20));
+        }
 
         //player shoot
 
@@ -738,7 +756,7 @@ if(sf::Mouse::isButtonPressed(sf::Mouse::Button::Left) && shootTimer >=20)
         if(nukeActive)
         window.draw(nukeEffectSprite);
         window.draw(instakillDurationBar);
-        window.draw(instakillDurationBarBorder);
+        window.draw(instakillDurationBarBorder);    
 
         //EnemySpawn 
         if (enemySpawnTimer < framerate *2) enemySpawnTimer++;
@@ -867,6 +885,16 @@ if(sf::Mouse::isButtonPressed(sf::Mouse::Button::Left) && shootTimer >=20)
                 i--;
                 break;
             } //out(bottom)
+
+            // enemy is hit 
+            if (vEnemyHP[i].isHit) {
+                vEnemyTexture[i].setColor(sf::Color(255, 90, 90));
+                vEnemyHP[i].hitTimer--;
+                if (vEnemyHP[i].hitTimer <= 0) {
+                    vEnemyHP[i].isHit = false;
+                    vEnemyTexture[i].setColor(sf::Color::White);
+                }
+            }
 
         }
         
