@@ -54,16 +54,13 @@ int main()
     sf::Texture instakillIcon("SpaceShooterShipConstructor/PNG/Addmore/instakill.png");
     sf::Texture resetCooldownIcon("SpaceShooterShipConstructor/PNG/Addmore/resetcooldown.png");
     sf::Texture nukeExplosion("SpaceShooterShipConstructor/PNG/Addmore/explosion.png");
-
+    sf::Texture asteroidTexture("Prop/Asteroid.png");
+    sf::Texture warningTexture("Prop/warning.png");
     sf::Texture effectTexture("Effect/effect.png");
-    sf::Texture nukeIcon("SpaceShooterShipConstructor/PNG/Addmore/nukeicon.png");
-    sf::Texture instakillIcon("SpaceShooterShipConstructor/PNG/Addmore/instakill.png");
-    sf::Texture resetCooldownIcon("SpaceShooterShipConstructor/PNG/Addmore/resetcooldown.png");
-    sf::Texture nukeExplosion("SpaceShooterShipConstructor/PNG/Addmore/explosion.png");
     sf::IntRect frame({0,0},{48,48});
     sf::Sprite showEffect(effectTexture,frame);
 
-    // sound
+        // sound
     sf::Music theme1("Sound/Theme.mp3");
     //theme1.setVolume(25);
     theme1.setLooping(true);
@@ -84,19 +81,9 @@ int main()
     sf::Sound effsound4(reset);
     //effsound4.setVolume(50);
 
-    sf::SoundBuffer nExplosion("Sound/nExplosion.wav");
-    sf::Sound effsound2(nExplosion);
-
-    sf::SoundBuffer instakillSound("Sound/instakill2.wav");
-    sf::Sound effsound3(instakillSound);
-    effsound3.setVolume(30);
-
-    sf::SoundBuffer reset("Sound/reset.wav");
-    sf::Sound effsound4(reset);
-    effsound4.setVolume(60);
-
     sf::SoundBuffer bBullet("Sound/bullet.wav");
     sf::Sound bulletSound(bBullet);
+
 
     // music sound
     ButtonSlide1.setUpdateFunction([&theme1](float volume) 
@@ -115,6 +102,11 @@ int main()
  
     Effect effect;
     std::vector<Effect> vEffect;
+
+    //asteroid
+    asteroid sad(asteroidTexture,warningTexture);
+    std::vector<asteroid> vAsteroid;
+    sf::Clock cAs;
 
 //******************************************************************UI****************************************************************/
     //Font Text
@@ -329,6 +321,7 @@ int main()
     int powerup = 0;
     int powerupCD = 0;
     //enemy factor
+    float AsSpawn = 7;
     int wave = 1;
     int enemySpawnTimer=2000;
     int enemiesToSpawn = 7; 
@@ -416,7 +409,7 @@ int main()
             if(resetGame){
                 restartGame = true;
                 pause = false;
-                vEnemyTexture.clear(); vEnemyHP.clear(); vBullet.clear(); bulletDirections.clear();
+                vEnemyTexture.clear(); vEnemyHP.clear(); vBullet.clear(); bulletDirections.clear(); vAsteroid.clear();
                 ultimateTime = 0;
                 e0.HPmax = 3; e0.HP = e0.HPmax;
                 e1.HPmax = 1; e1.HP = e1.HPmax;
@@ -483,7 +476,7 @@ if (play) {
         //abilities//
         //nuke//
         if(nukeCooldown <= 0 && sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Num1)){
-        nuke(vEnemyTexture, vEnemyHP, enemybulletEtlite, enemybulletDirections, vBullet);
+        nuke(vEnemyTexture, vEnemyHP, enemybulletEtlite, enemybulletDirections, vBullet,vEffect,effect);
         nukeCooldown = 120 * 30;
         nukeActive = true;
         nukeTimer = 120 * 5;
@@ -536,6 +529,12 @@ if (play) {
             instakillDurationBar.setSize(sf::Vector2f(0, 20));
         }
 
+        //asteroid
+        if(cAs.getElapsedTime().asSeconds()>=AsSpawn){
+            vAsteroid.push_back(sad);
+            cAs.restart();
+        }
+            
         //player shoot
 
 if(sf::Mouse::isButtonPressed(sf::Mouse::Button::Left) && shootTimer >=20)
@@ -646,6 +645,7 @@ if(sf::Mouse::isButtonPressed(sf::Mouse::Button::Left) && shootTimer >=20)
 
         if (vEnemyTexture.size() == 0 && enemiesSpawned >= enemiesToSpawn* currentPatterns && enemySpawnTimer >= framerate*2) {
             wave++;
+            if(AsSpawn>=1)AsSpawn-=0.25;
             if(wave% 10 == 0)superelitespawn =true;
             currentPatterns++;
             enemiesSpawned = 0;
@@ -1018,7 +1018,19 @@ if(sf::Mouse::isButtonPressed(sf::Mouse::Button::Left) && shootTimer >=20)
                 }
             }
         }  
-
+        //asteroid
+        if(player.HP>0){
+        for (int i = vAsteroid.size()-1 ; i >= 0 ; i--)
+            {
+                vAsteroid[i].asteroidMove(window,pause);
+                if(vAsteroid[i].asteroidSprite.getGlobalBounds().findIntersection(playerShape.getGlobalBounds()) )
+                {   if(!shield && playerHitCD <= 0)player.HP -= 5;
+                    vAsteroid.erase(vAsteroid.begin()+i);  
+                    break;}
+                if(vAsteroid[i].spritePOS().y>800){vAsteroid.erase(vAsteroid.begin()+i);  break;} 
+            }
+        }
+        //effect    
         for (int i = 0; i < vEffect.size(); i++)
             {
                 vEffect[i].effectChange(showEffect,effSound1,vEffect.back().pos,window,pause);
