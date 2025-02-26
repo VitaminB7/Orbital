@@ -5,7 +5,6 @@
 #include <cmath>
 #include <ctime>
 
-
 class Player
 { 
 public: 
@@ -35,8 +34,6 @@ public:
     int shootTimer;
     float speed;
     float speedmax;
-    bool isHit;
-    int hitTimer;
 
 
     Enemy(){
@@ -47,8 +44,6 @@ public:
         shootTimer = -30;
         speed = 0.5;
         speedmax = 2.5;
-        isHit = false;
-        hitTimer = 0;
     }
 
     Enemy(int a){
@@ -272,117 +267,3 @@ void SpawnSuperEnemyElite(sf::RenderWindow &window,
             vEnemyTexture.back().setPosition({startX, startY});
         }
 
-
-//ability
-void clearEnemyBullets(std::vector<Bullet>& vBullet) {
-    for (int i = vBullet.size() - 1; i >= 0; i--) {
-        if (vBullet[i].type == 'e' || vBullet[i].type == 'E') {
-            vBullet.erase(vBullet.begin() + i);
-        }
-    }
-}
-
-void nuke(std::vector<sf::Sprite>& vEnemyTexture, std::vector<Enemy>& vEnemyHP,
-    std::vector<sf::Sprite>& enemybulletEtlite, std::vector<sf::Vector2f>& enemybulletDirections,
-    std::vector<Bullet>& vBullet,std::vector<Effect> &vEffect,Effect effect) {
-
-    for (int i = 0; i < vEnemyHP.size(); i++)
-    {
-        if(vEnemyHP[i].type != 5) 
-        vEnemyHP[i].HP = 0;
-        if (vEnemyHP[i].HP <= 0) {
-            vEffect.push_back(effect);
-            vEffect.back().pos={vEnemyTexture[i].getPosition()};
-            vEnemyTexture.erase(vEnemyTexture.begin() + i);
-            vEnemyHP.erase(vEnemyHP.begin() + i);
-            i--;
-        }    
-    }
-    
-    enemybulletEtlite.clear();
-    enemybulletDirections.clear();
-    clearEnemyBullets(vBullet);
-}
-
-class asteroid {
-
-    sf::Sprite warningSprite; 
-    sf::Clock clock;
-    sf::Clock clockBlink;
-    sf::RectangleShape warningArea;
-    int state = 0;
-    int blink;
-    float R;
-    sf::Vector2f pos;
-
-public:
-    sf::Sprite asteroidSprite;
-    asteroid(sf::Texture &asTex, sf::Texture &warnTex);
-    void asteroidMove(sf::RenderWindow& window,bool &pause); 
-    void warnBlink();
-    sf::Vector2f spritePOS();
-    void update();
-};
-
-asteroid::asteroid(sf::Texture &asTex, sf::Texture &warnTex)
-: asteroidSprite(asTex) , warningSprite(warnTex)
-{
-    asteroidSprite.setScale({0.1,0.1});
-    warningSprite.setScale({0.1,0.1});
-    warningArea.setSize({asteroidSprite.getGlobalBounds().size.x, 1000.f});
-    warningArea.setFillColor(sf::Color(255,0,0,80));
-}
-
-
-void asteroid::warnBlink() {
-    if(state<=4){
-        if (clockBlink.getElapsedTime().asSeconds() < 0.5f) {
-            blink = 255;
-        } else if (clockBlink.getElapsedTime().asSeconds() < 1.f) {
-            blink = 50;
-        }
-        else if (clockBlink.getElapsedTime().asSeconds() > 1.f)
-        {
-        clockBlink.restart();
-        state++;
-        }
-    }
-}
-
-void asteroid::asteroidMove(sf::RenderWindow& window,bool &pause) {
-    
-    if(!pause){
-        if(state==0)
-        {
-            update();
-            state++;
-        }
-        if(state<=4)
-        {
-            warnBlink();
-            warningSprite.setColor(sf::Color(255,0,0,blink));
-            window.draw(warningSprite);
-            window.draw(warningArea);
-        }
-        else 
-        {
-            asteroidSprite.move({0,10});
-            window.draw(asteroidSprite);
-        }
-    }
-}
-
-sf::Vector2f asteroid::spritePOS()
-{
-    return asteroidSprite.getPosition();
-}
-
-void asteroid::update()
-{
-    R = rand() % 800 + asteroidSprite.getGlobalBounds().size.x;
-    if (R > 800 - asteroidSprite.getGlobalBounds().size.x) R = 800 - asteroidSprite.getGlobalBounds().size.x;
-    pos = {R,0};
-    warningArea.setPosition(pos);
-    warningSprite.setPosition({pos.x+13,0});
-    asteroidSprite.setPosition(pos);
-}
