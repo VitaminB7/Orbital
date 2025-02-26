@@ -4,6 +4,7 @@
 #include <vector>
 #include <cmath>
 #include <ctime>
+#include <string>
 #include "MainMenu.h"
 #include "effect.h"
 
@@ -20,7 +21,7 @@ public:
     int score;
     
     Player(){
-        HPmax= 30;
+        HPmax= 10;
         HP=HPmax;
         Pdmg = 1;
         score = 0;
@@ -45,7 +46,7 @@ public:
     int hitTimer;
 
 
-    Enemy(){
+     Enemy(){
         type = 0;
         limithp = 6;
         HPmax=3;
@@ -172,8 +173,10 @@ int main()
     setting.antiAliasingLevel = 4;
     sf::RenderWindow window(sf::VideoMode({1000,900}),"Orbital", sf::Style::Close , sf::State::Windowed, setting);
     MainMenu mainMenu({800,600});
+    float x = 350;
+    ButtonSlide ButtonSlide1({x, 400, 400});
+    ButtonSlide ButtonSlide2({x, 500, 400});
     window.setFramerateLimit(framerate);
-
     
     //texture
     sf::Texture playerTexture("SpaceShooterShipConstructor/PNG/Example/01.png");
@@ -185,11 +188,18 @@ int main()
     sf::Texture playerUltimateBulletTexture("SpaceShooterShipConstructor/PNG/Bullets/12.png");
     sf::Texture enemyBulletTexture("SpaceShooterShipConstructor/PNG/Bullets/02.png");
     sf::Texture elite01bulletTexture("SpaceShooterShipConstructor/PNG/Bullets/05.png");
+    sf::Texture missileTexture("SpaceShooterShipConstructor/PNG/Addmore/missile.png");
     sf::Texture upgradeWeapon("SpaceShooterShipConstructor/PNG/Addmore/upgrade_icon.png");
     sf::Texture Heal("SpaceShooterShipConstructor/PNG/Addmore/heal.png");
     sf::Texture ShieldIcon("SpaceShooterShipConstructor/PNG/Addmore/shield_icon.png");
     sf::Texture ShieldActive("SpaceShooterShipConstructor/PNG/Addmore/shield_active.png");
-    sf::Texture missileTexture("SpaceShooterShipConstructor/PNG/Addmore/missile.png");
+    sf::Texture background("Scene/Space Background (2).png");
+    sf::Texture bgMainmenu("Scene/Space Background (1).png");
+    sf::Texture nukeIcon("SpaceShooterShipConstructor/PNG/Addmore/nukeicon.png");
+    sf::Texture instakillIcon("SpaceShooterShipConstructor/PNG/Addmore/instakill.png");
+    sf::Texture resetCooldownIcon("SpaceShooterShipConstructor/PNG/Addmore/resetcooldown.png");
+    sf::Texture nukeExplosion("SpaceShooterShipConstructor/PNG/Addmore/explosion.png");
+
     sf::Texture effectTexture("Effect/effect.png");
     sf::Texture nukeIcon("SpaceShooterShipConstructor/PNG/Addmore/nukeicon.png");
     sf::Texture instakillIcon("SpaceShooterShipConstructor/PNG/Addmore/instakill.png");
@@ -200,13 +210,24 @@ int main()
 
     // sound
     sf::Music theme1("Sound/Theme.mp3");
-    theme1.setVolume(25);
+    //theme1.setVolume(25);
     theme1.setLooping(true);
     theme1.play();
 
     sf::SoundBuffer mExplode("Sound/mExplode.mp3");
     sf::Sound effSound1(mExplode);
-    effSound1.setVolume(60);
+    //effSound1.setVolume(60);
+
+    sf::SoundBuffer nExplosion("Sound/nExplosion.wav");
+    sf::Sound effsound2(nExplosion);
+
+    sf::SoundBuffer instakillSound("Sound/instakill2.wav");
+    sf::Sound effsound3(instakillSound);
+    //effsound3.setVolume(25);
+
+    sf::SoundBuffer reset("Sound/reset.wav");
+    sf::Sound effsound4(reset);
+    //effsound4.setVolume(50);
 
     sf::SoundBuffer nExplosion("Sound/nExplosion.wav");
     sf::Sound effsound2(nExplosion);
@@ -221,6 +242,21 @@ int main()
 
     sf::SoundBuffer bBullet("Sound/bullet.wav");
     sf::Sound bulletSound(bBullet);
+
+    // music sound
+    ButtonSlide1.setUpdateFunction([&theme1](float volume) 
+    {
+        theme1.setVolume(volume);
+    });
+
+    // effectSound
+    ButtonSlide2.setUpdateFunction([&](float volume) {
+        effSound1.setVolume(volume);
+        effsound2.setVolume(volume);
+        effsound3.setVolume(volume);
+        effsound4.setVolume(volume);
+        bulletSound.setVolume(volume);
+    });
  
     Effect effect;
     std::vector<Effect> vEffect;
@@ -233,15 +269,35 @@ int main()
     sf::Text restartText(font);
     sf::Text yourScoreText(font);
     sf::Text resumeText(font);
-    sf::Text obritalText(font); 
     sf::Text nukeCooldownText(font);
     sf::Text instakillCooldownText(font);
     sf::Text resetCooldownText(font);
     //Obrital
-    obritalText.setString("Obrital");
+    sf::Text obritalText(font);
+    sf::Text shadowText(font);
+    obritalText.setString("Orbital");
     obritalText.setFillColor(sf::Color::Red);
-    obritalText.setCharacterSize(100);
-    obritalText.setPosition(sf::Vector2f(70, 170));
+    obritalText.setCharacterSize(170);
+    obritalText.setPosition(sf::Vector2f(70, 70));
+    shadowText = obritalText;
+    shadowText.setFillColor(sf::Color(0, 0, 0, 150)); 
+    shadowText.move({10, 10});
+    sf::Texture musicText("Prop/Shadow/64/Music-0.png");
+    sf::Sprite music(musicText);
+    music.setOrigin({64/2,64/2});
+    music.setPosition({285, 415});
+    sf::Texture soundText("Prop/Shadow/64/Speaker-0.png");
+    sf::Sprite sound(soundText);
+    sound.setOrigin({64/2,64/2});
+    sound.setPosition({285, 515});
+    sf::Texture backText("Prop/Shadow/64/Back.png");
+    sf::Sprite back(backText);
+    back.setScale({1.5,1.4});
+    back.setPosition({20,20});
+    //Background
+    sf::Sprite backgroundGame(background);
+    sf::Sprite bgMenu(bgMainmenu);
+  
     //ability cooldown
     nukeCooldownText.setCharacterSize(25);
     nukeCooldownText.setFillColor(sf::Color::Black);
@@ -264,36 +320,37 @@ int main()
     instakillDurationBarBorder.setOutlineColor(sf::Color::Black);
     instakillDurationBarBorder.setPosition({20, 170});
     //Pause Game
-    sf::Texture button("Prop/button UI.png");
-    sf::IntRect pause1(sf::Vector2i(16*11, 16*9), sf::Vector2i(16, 16));
-    sf::Sprite Pause(button);
-    Pause.setTextureRect(pause1);
-    Pause.setPosition({721,15});
-    Pause.setScale({4,4});
-    sf::IntRect restart1(sf::Vector2i(16*9, 16*9), sf::Vector2i(16, 16));
-    sf::Sprite restart(button);
-    restart.setTextureRect(restart1);
-    restart.setPosition({380,355});
-    restart.setScale({4,4});
-    sf::IntRect resume1(sf::Vector2i(16*7, 16*9), sf::Vector2i(16, 16));
-    sf::Sprite resume(button);
-    resume.setTextureRect(resume1);
-    resume.setPosition({280,355});
-    resume.setScale({4,4});
-    sf::IntRect exit1(sf::Vector2i(16*10, 16*10), sf::Vector2i(16, 16));
-    sf::Sprite exit(button);
-    exit.setTextureRect(exit1);
-    exit.setPosition({480,355});
-    exit.setScale({4,4});
+    float centerX = 1000/2 - 96/2;
+    float centerY = 900/2 - 96/2;
+    sf::Texture pauseTex("Prop/Shadow/16/Pause.png");
+    sf::Sprite Pause(pauseTex);
+    Pause.setScale({6,6});
+    Pause.setPosition({1000 - 111,15});
+    sf::Texture resumeTexture("Prop/Shadow/16/Play.png");
+    sf::Sprite resume(resumeTexture);
+    resume.setPosition({centerX - 96 - 10, centerY - 96 - 10});
+    resume.setScale({6,6});
+    sf::Texture restartTexture("Prop/Shadow/16/Redo.png");
+    sf::Sprite restart(restartTexture);
+    restart.setPosition({centerX + 96 + 10, centerY - 96 - 10});
+    restart.setScale({6,6});
+    sf::Texture exitTexture("Prop/Shadow/16/Exit.png");
+    sf::Sprite exit(exitTexture);
+    exit.setPosition({centerX - 96 - 10, centerY + 96 + 10});
+    exit.setScale({6,6});
+    sf::Texture homeText("Prop/Shadow/16/Home.png");
+    sf::Sprite home(homeText);
+    home.setPosition({centerX + 96 + 10, centerY + 96 + 10});
+    home.setScale({6,6});
     //Text GameOver
     std::stringstream got,rt;
     got << " Game Over ";
     gameOverText.setString(got.str());
     gameOverText.setFillColor(sf::Color::Red);
     gameOverText.setCharacterSize(100);
-    gameOverText.setPosition({400,300});
+    gameOverText.setPosition({500,300});
     gameOverText.setOrigin({gameOverText.getGlobalBounds().size.x / 2, gameOverText.getGlobalBounds().size.y / 2});
-    sf::RectangleShape gameOverBg({800,800});
+    sf::RectangleShape gameOverBg({1000,900});
     gameOverBg.setFillColor(sf::Color(0, 0, 0, 130));
     //Blink String
     sf::Clock clock;
@@ -304,13 +361,8 @@ int main()
     restartText.setString(rt.str());
     restartText.setFillColor(sf::Color::White);
     restartText.setCharacterSize(40);
-    restartText.setPosition({400,480});
+    restartText.setPosition({500,480});
     restartText.setOrigin({restartText.getGlobalBounds().size.x / 2, restartText.getGlobalBounds().size.y / 2});
-    //Close Game
-    sf::Texture homeGame("Prop/home.png");
-    sf::Sprite home(homeGame);
-    home.setPosition({721,15});
-    home.setScale({4,4});
 
 //******************************************************************************************************************************************* */
     
@@ -408,6 +460,8 @@ int main()
     bool wasClickedPlay = false;
     bool ismainMenu = true;
     bool restartGame = false;
+    bool homeGame = false;
+    bool resetGame = false;
     //general factor
     int shootTimer = 100;
     int RandUpgrade = 0;
@@ -477,16 +531,60 @@ int main()
                     std::cout << "Play"; play = true; ismainMenu = false;  
                 }   
                 if (x == 1) 
-                    std::cout << "Option";
+                {
+                    ismainMenu = false;
+                }
                 if (x == 2) 
                 {
                     std::cout << "Exit"; window.close();
                 }      
             } 
                 //window.clear();
+                window.draw(bgMenu);
                 mainMenu.draw(window);
+                window.draw(shadowText);
                 window.draw(obritalText);
                 //window.display();
+            }
+            if (!ismainMenu && !play) { //หน้าsetting
+                window.draw(bgMenu); window.draw(gameOverBg); window.draw(sound); window.draw(music); window.draw(back);
+                ButtonSlide1.draw(window);
+                ButtonSlide2.draw(window);
+                ButtonSlide1.handle(window);
+                ButtonSlide2.handle(window);
+                if (sf::Mouse::isButtonPressed(sf::Mouse::Button::Left)) {
+                    sf::Vector2f mousePos = sf::Vector2f(sf::Mouse::getPosition(window));
+                    if (back.getGlobalBounds().contains(mousePos)) {
+                        ismainMenu = true;
+                    }
+                } 
+                
+            } 
+
+            //resetGame
+            if(resetGame){
+                restartGame = true;
+                pause = false;
+                vEnemyTexture.clear(); vEnemyHP.clear(); vBullet.clear(); bulletDirections.clear();
+                ultimateTime = 0;
+                e0.HPmax = 3; e0.HP = e0.HPmax;
+                e1.HPmax = 1; e1.HP = e1.HPmax;
+                elite01.HPmax = 20; elite01.HP = elite01.HPmax;
+                elite02.HPmax = 30; elite02.HP = elite01.HPmax;
+                missile.HP = 1; missile.HP = missile.HPmax;
+                missile.speed = 3; e0.speed = 1; e1.speed = 3;
+                ultimate = false;
+                getfirst = false;
+                enemiesToSpawn = 0; enemiesSpawned = 0; enemySpawnTimer = 0;
+                checkpow = 0;
+                wave = 0;
+                powerup = 0;
+                nukeCooldown = 0; nukeActive = false;
+                instakillCooldown = 0; instakill = false;
+                resetCooldown = 0; 
+                playerShape.setPosition({500,850});
+                player.score = 0;
+                player.HP = player.HPmax;
             }
             //Blink String
             if (blink) 
@@ -507,7 +605,7 @@ int main()
         yourScoreText.setString(yst.str());
         yourScoreText.setFillColor(sf::Color::Blue);
         yourScoreText.setCharacterSize(60);
-        yourScoreText.setPosition({400,400});
+        yourScoreText.setPosition({500,400});
         yourScoreText.setOrigin({yourScoreText.getGlobalBounds().size.x / 2, yourScoreText.getGlobalBounds().size.y / 2});
 
         //update
@@ -641,13 +739,9 @@ if(sf::Mouse::isButtonPressed(sf::Mouse::Button::Left) && shootTimer >=20)
     }
     shootTimer = 0;
 }
-
-
-        
         //clear
-        window.clear(sf::Color(124,124,124));
-        
         //draw
+        window.draw(backgroundGame);
         window.draw(Pause); 
         window.draw(scoreText);
         window.draw(playerShape);
@@ -997,82 +1091,51 @@ if(sf::Mouse::isButtonPressed(sf::Mouse::Button::Left) && shootTimer >=20)
                 
             }    
             if (pause) {
-                window.clear(sf::Color(124,124,124));
+                window.draw(backgroundGame);
+                window.draw(gameOverBg);
                 window.draw(resume);
                 window.draw(restart);
                 window.draw(exit);
+                window.draw(home);
                 if (resume.getGlobalBounds().contains(mousePos)) pause = !pause;  
-                if (restart.getGlobalBounds().contains(mousePos)) 
-                {
-                    cout << "restart was clicked";
-                    restartGame = true;
-                    pause = false;
-                    vEnemyTexture.clear(); vEnemyHP.clear(); vBullet.clear();  
-                    bulletDirections.clear();
-                    ultimateTime = 0;
-                    e0.HPmax = 3;
-                    e0.HP = e0.HPmax;
-                    e1.HPmax = 1;
-                    e1.HP = e1.HPmax;
-                    elite01.HPmax = 20;
-                    elite01.HP = elite01.HPmax;
-                    elite02.HPmax = 30;
-                    elite02.HP = elite01.HPmax;
-                    missile.HP = 1;
-                    missile.HP = missile.HPmax;
-                    missile.speed = 3;
-                    e0.speed = 1;
-                    e1.speed = 3;
-                    ultimate = false;
-                    getfirst = false;
-                    enemiesToSpawn = 0; 
-                    enemiesSpawned = 0;
-                    enemySpawnTimer = 0;
-                    checkpow = 0;
-                    wave = 0;
-                    powerup = 0;
-                    playerShape.setPosition({370,700});
-                    player.score = 0;
-                    player.HP = player.HPmax;
-                }  
+                if (restart.getGlobalBounds().contains(mousePos)) resetGame = true;
+                if (sf::Mouse::isButtonPressed(sf::Mouse::Button::Left)) 
+            {
+                sf::Vector2f mousePos = sf::Vector2f(sf::Mouse::getPosition(window)); 
+                if (home.getGlobalBounds().contains(mousePos)) {
+                    play = false;
+                    resetGame = true;
+                    ismainMenu = true;
+                }
+            }
                 if (exit.getGlobalBounds().contains(mousePos)) window.close();
             }
         } else {
-            wasClickedPause = false; 
+            wasClickedPause = false; resetGame = false;
         }
             
-        if (player.HP <= 0 || restartGame) //Game Over
+        if (player.HP <= 0) //Game Over
         {   
-            if (player.HP <= 0) {
-            window.clear(sf::Color(124,124,124));
+            window.draw(backgroundGame);
             window.draw(gameOverBg);
             window.draw(gameOverText);
             window.draw(restartText);
             window.draw(yourScoreText);
-            window.draw(home);
-            }
-            restartGame = false;
+            window.draw(back);
             if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::R)) //Restart Game
-            {
-                bulletDirections.clear();
-                vEnemyTexture.clear(); vEnemyHP.clear(); vBullet.clear(); 
-                ultimateTime = 0;
-                ultimate = false;
-                getfirst = false;
-                enemiesToSpawn = 0; 
-                enemiesSpawned = 0;
-                wave = 0;
-                powerup = 0;
-                playerShape.setPosition({370,700});
-                player.score = 0;
-                player.HP = player.HPmax;
-            }
-            if (sf::Mouse::isButtonPressed(sf::Mouse::Button::Left)) //Close Game
+            { 
+                resetGame = true; 
+            } 
+            if (sf::Mouse::isButtonPressed(sf::Mouse::Button::Left)) //Back to mainmenu
             {
                 sf::Vector2f mousePos = sf::Vector2f(sf::Mouse::getPosition(window)); 
-                if (home.getGlobalBounds().contains(mousePos)) ismainMenu = true;
+                if (back.getGlobalBounds().contains(mousePos)) {
+                    ismainMenu = true;
+                    play = false;
+                    resetGame = true;
+                }
             }
-        } 
+        }  
 
         for (int i = 0; i < vEffect.size(); i++)
             {
@@ -1176,4 +1239,3 @@ void SpawnMissile( sf::Vector2f  enemyPos,
             vEnemyHP.push_back(missile);
             vEnemyTexture.back().setPosition({enemyPos});
     }
-
