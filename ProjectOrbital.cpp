@@ -239,7 +239,7 @@ int main()
     Enemy superelite(5);
 
     sf::Sprite enemyShape(enemyTexture);
-    enemyShape.setOrigin({enemyShape.getGlobalBounds().size.x/2-20,enemyShape.getGlobalBounds().size.y/2-10});
+    enemyShape.setOrigin({enemyShape.getGlobalBounds().size.x/2,enemyShape.getGlobalBounds().size.y/2-10});
     enemyShape.setRotation(sf::degrees(180.f));
     enemyShape.scale({0.6f,0.6f});
     std::vector<sf::Sprite> vEnemyTexture;
@@ -408,7 +408,7 @@ int main()
             if(resetGame){
                 restartGame = true;
                 pause = false;
-                vEnemyTexture.clear(); vEnemyHP.clear(); vBullet.clear(); bulletDirections.clear(); vAsteroid.clear();
+                vEnemyTexture.clear(); vEnemyHP.clear(); vBullet.clear(); bulletDirections.clear(); vAsteroid.clear();vUpWeapon.clear();vType.clear();
                 ultimateTime = 0;
                 e0.HPmax = 3; e0.HP = e0.HPmax;
                 e1.HPmax = 1; e1.HP = e1.HPmax;
@@ -422,6 +422,7 @@ int main()
                 ultimate = false;
                 getfirst = false;
                 enemiesToSpawn = 10; enemiesSpawned = 0; enemySpawnTimer = 0;
+                shield = false;
                 checkpow = 0;
                 wave = 1;
                 powerup = 0;
@@ -1042,7 +1043,7 @@ if(sf::Mouse::isButtonPressed(sf::Mouse::Button::Left) && shootTimer >=20)
             }
         }  
         //check wave
-        //cout << wave<< " " << currentPatterns << " " << enemiesToSpawn << " " << currentPatterns<<endl;
+        cout << wave<< " " << currentPatterns << " " << enemiesToSpawn << " " << currentPatterns<<endl;
         //asteroid
         if(player.HP>0){
         for (int i = vAsteroid.size()-1 ; i >= 0 ; i--)
